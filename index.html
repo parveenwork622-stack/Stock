@@ -1,0 +1,2243 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📦 Anand Garments Pvt. Ltd. — Stock Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Bebas+Neue&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#03050e;--bg2:#070a16;--sf:#0c1022;--sf2:#101528;--sf3:#151c30;
+  --bd:#182035;--bd2:#1f2a45;
+  --a:#00d4ff;--a2:#00ff9d;--a3:#ff6b35;--a4:#a855f7;--a5:#fbbf24;
+  --red:#ff3b5c;--warn:#f59e0b;
+  --t:#e2e8f0;--t2:#94a3b8;--t3:#4a5568;
+  --mono:'JetBrains Mono',monospace;--dis:'Bebas Neue',sans-serif;
+  --body:'Space Grotesk',sans-serif;--hi:'Noto Sans Devanagari',sans-serif;
+  --r:14px;--r2:10px;--r3:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--t);font-family:var(--body);min-height:100vh;overflow-x:hidden;font-size:14px}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+
+/* ── UPLOAD SCREEN — REDESIGN ── */
+#uploadScreen{
+  position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;padding:24px;overflow-y:auto;
+}
+
+/* Radial glow blobs */
+#uploadScreen::before{
+  content:'';position:fixed;top:-20%;left:-10%;
+  width:60vw;height:60vw;
+  background:radial-gradient(circle,rgba(0,212,255,.07) 0%,transparent 70%);
+  pointer-events:none;z-index:0;
+}
+#uploadScreen::after{
+  content:'';position:fixed;bottom:-20%;right:-10%;
+  width:55vw;height:55vw;
+  background:radial-gradient(circle,rgba(168,85,247,.07) 0%,transparent 70%);
+  pointer-events:none;z-index:0;
+}
+
+.upload-inner{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;
+  gap:0;width:100%;max-width:680px;
+}
+
+/* Company Badge */
+.company-badge{
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(0,212,255,.08));
+  border:1px solid rgba(168,85,247,.3);
+  border-radius:100px;
+  padding:7px 20px 7px 14px;
+  margin-bottom:28px;
+  animation:fadeUp .5s ease forwards;
+}
+.company-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--a4);
+  box-shadow:0 0 12px var(--a4);
+  animation:blink 2s infinite;
+  flex-shrink:0;
+}
+.company-name{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:12px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--a4);
+}
+
+/* Logo */
+.u-logo-wrap{
+  text-align:center;margin-bottom:8px;
+  animation:fadeUp .5s .05s ease both;
+}
+.u-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(56px,10vw,88px);
+  letter-spacing:14px;
+  background:linear-gradient(135deg,var(--a) 0%,var(--a2) 50%,var(--a4) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 0 40px rgba(0,212,255,.3));
+  line-height:1;
+}
+.u-tagline{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:13px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--t3);margin-top:6px;
+}
+
+/* Divider */
+.u-divider{
+  width:100%;height:1px;margin:28px 0;
+  background:linear-gradient(to right,transparent,rgba(0,212,255,.25),rgba(168,85,247,.25),transparent);
+  animation:fadeUp .5s .1s ease both;
+}
+
+/* Drop zone */
+.u-drop{
+  width:100%;
+  border:2px dashed rgba(0,212,255,.22);
+  border-radius:20px;
+  padding:40px 32px;
+  text-align:center;
+  cursor:pointer;
+  position:relative;
+  background:linear-gradient(135deg,rgba(0,212,255,.025),rgba(168,85,247,.02));
+  transition:all .3s ease;
+  animation:fadeUp .5s .15s ease both;
+  overflow:hidden;
+}
+.u-drop::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(168,85,247,.04));
+  opacity:0;transition:opacity .3s;border-radius:18px;
+}
+.u-drop:hover,.u-drop.drag{
+  border-color:rgba(0,212,255,.5);
+  box-shadow:0 0 60px rgba(0,212,255,.1), inset 0 0 40px rgba(0,212,255,.04);
+  transform:translateY(-2px);
+}
+.u-drop:hover::before,.u-drop.drag::before{opacity:1;}
+.u-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+
+.u-icon-ring{
+  width:72px;height:72px;
+  border-radius:50%;
+  background:linear-gradient(135deg,rgba(0,212,255,.12),rgba(168,85,247,.1));
+  border:1px solid rgba(0,212,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;
+  margin:0 auto 16px;
+  animation:float 3s ease-in-out infinite;
+  box-shadow:0 0 30px rgba(0,212,255,.1);
+}
+
+.u-drop-title{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:20px;font-weight:700;
+  color:var(--t);margin-bottom:8px;
+  letter-spacing:.02em;
+}
+.u-drop-sub{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:13px;color:var(--t3);line-height:1.7;
+}
+.u-drop-sub span{
+  display:inline-block;
+  background:rgba(0,212,255,.07);
+  border:1px solid rgba(0,212,255,.15);
+  border-radius:6px;padding:2px 10px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;color:var(--a);
+  margin:2px;
+}
+
+/* Features row */
+.u-features{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;width:100%;margin-top:16px;
+  animation:fadeUp .5s .2s ease both;
+}
+.u-feat{
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--bd);border-radius:12px;
+  padding:14px 12px;text-align:center;
+  transition:all .2s;
+}
+.u-feat:hover{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.2)}
+.u-feat-ico{font-size:20px;margin-bottom:6px}
+.u-feat-title{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;color:var(--t);margin-bottom:3px;letter-spacing:.03em}
+.u-feat-sub{font-family:'Space Grotesk',sans-serif;font-size:10px;color:var(--t3);line-height:1.5}
+
+/* Columns box */
+.u-cols{
+  width:100%;
+  background:rgba(255,255,255,.015);
+  border:1px solid var(--bd);
+  border-radius:14px;padding:16px 20px;
+  margin-top:14px;
+  animation:fadeUp .5s .25s ease both;
+}
+.u-cols-label{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:10px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--t3);margin-bottom:10px;
+}
+.u-pills{display:flex;flex-wrap:wrap;gap:6px}
+.u-pill{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;padding:4px 12px;border-radius:6px;
+  background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.16);color:var(--a);
+}
+
+/* Load button */
+.u-btn{
+  display:none;margin-top:20px;
+  background:linear-gradient(135deg,var(--a),var(--a2));
+  color:#000;font-family:'Space Grotesk',sans-serif;
+  font-weight:800;font-size:15px;letter-spacing:.05em;
+  border:none;padding:16px 56px;border-radius:100px;
+  cursor:pointer;transition:all .25s;
+  animation:fadeUp .4s ease both;
+  text-transform:uppercase;
+}
+.u-btn:hover{transform:scale(1.06) translateY(-2px);box-shadow:0 0 60px rgba(0,212,255,.45)}
+.u-btn:disabled{opacity:.6;cursor:default;transform:none}
+
+.perr{font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--red);background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.25);border-radius:10px;padding:12px 20px;text-align:center;max-width:560px;display:none;margin-top:10px;}
+
+/* ── APP ── */
+#app{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1}
+
+/* ── TOPBAR ── */
+.topbar{background:rgba(3,5,14,.97);backdrop-filter:blur(28px);border-bottom:1px solid var(--bd);padding:0 18px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:10px}
+.tlogo{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:800;letter-spacing:.06em;background:linear-gradient(135deg,var(--a),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex-shrink:0;text-transform:uppercase;line-height:1.2;max-width:200px}
+.tmeta{font-family:var(--hi);font-size:11px;color:var(--t3);display:flex;align-items:center;gap:10px;flex:1;min-width:0;overflow:hidden}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--a2);box-shadow:0 0 10px var(--a2);animation:blink 2s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+#topMetaText{font-family:var(--hi);font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tnav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.ntab{font-family:var(--hi);font-size:11px;padding:5px 12px;border-radius:100px;border:1px solid var(--bd2);color:var(--t2);cursor:pointer;transition:all .2s;background:transparent;white-space:nowrap}
+.ntab:hover,.ntab.active{background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.4);color:var(--a)}
+.newbtn{font-family:var(--hi);font-size:11px;padding:6px 14px;border-radius:100px;background:linear-gradient(135deg,var(--a),var(--a2));color:#000;font-weight:800;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+/* ── TICKER ── */
+.tickwrap{background:var(--sf2);border-bottom:1px solid var(--bd);overflow:hidden;height:30px;display:flex;align-items:center}
+.ticklabel{font-family:var(--hi);font-size:10px;background:var(--a);color:#000;padding:0 11px;height:100%;display:flex;align-items:center;flex-shrink:0;font-weight:800;letter-spacing:.04em}
+.tickcontent{display:flex;gap:36px;animation:tickscroll 50s linear infinite;white-space:nowrap;padding-left:24px}
+.tickcontent:hover{animation-play-state:paused}
+@keyframes tickscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.titem{font-family:var(--mono);font-size:10px;color:var(--t2);display:flex;align-items:center;gap:5px}
+.titem .tn{color:var(--t);font-weight:500}.titem .tv{color:var(--a2)}.titem .tneg{color:var(--red)}
+
+/* ── CONTENT ── */
+.content{padding:18px;flex:1;max-width:1920px;margin:0 auto;width:100%}
+
+/* ── PAGE ── */
+.page{display:none}.page.active{display:block}
+
+/* ── SECTION TITLE ── */
+.sectitle{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.sectitle h2{font-family:var(--dis);font-size:22px;letter-spacing:3px;color:var(--t)}
+.sectitle .hin{font-family:var(--hi);font-size:12px;color:var(--t3);letter-spacing:0}
+.secline{flex:1;height:1px;background:linear-gradient(to right,var(--bd2),transparent);min-width:20px}
+.secbadge{font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:100px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);color:var(--a2);white-space:nowrap}
+
+/* ── KPI GRID ── */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:22px}
+.kcard{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:20px 18px;position:relative;cursor:default;transition:transform .2s,border-color .3s;animation:fadeUp .5s ease forwards;opacity:0}
+.kcard:hover{transform:translateY(-4px)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.kcard::before{content:'';position:absolute;top:-40px;right:-40px;width:100px;height:100px;border-radius:50%;filter:blur(30px);opacity:.18}
+.kc1{border-color:rgba(0,212,255,.18)}.kc1::before{background:var(--a)}
+.kc2{border-color:rgba(0,255,157,.18)}.kc2::before{background:var(--a2)}
+.kc3{border-color:rgba(255,107,53,.18)}.kc3::before{background:var(--a3)}
+.kc4{border-color:rgba(168,85,247,.18)}.kc4::before{background:var(--a4)}
+.kc5{border-color:rgba(251,191,36,.18)}.kc5::before{background:var(--a5)}
+.kc6{border-color:rgba(255,59,92,.18)}.kc6::before{background:var(--red)}
+.kc7{border-color:rgba(6,182,212,.18)}.kc7::before{background:#06b6d4}
+.kc8{border-color:rgba(16,185,129,.18)}.kc8::before{background:#10b981}
+.kicon{position:absolute;top:14px;right:14px;font-size:22px;opacity:.28}
+.klabel{font-family:var(--hi);font-size:12px;color:var(--t3);margin-bottom:10px;line-height:1.4}
+.kval{font-family:var(--dis);font-size:28px;letter-spacing:1px;line-height:1}
+.kc1 .kval{color:var(--a)}.kc2 .kval{color:var(--a2)}.kc3 .kval{color:var(--a3)}
+.kc4 .kval{color:var(--a4)}.kc5 .kval{color:var(--a5)}.kc6 .kval{color:var(--red)}
+.kc7 .kval{color:#06b6d4}.kc8 .kval{color:#10b981}
+.ksub{font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:6px;line-height:1.5}
+.kexpl{font-family:var(--hi);font-size:10px;color:var(--t3);margin-top:7px;font-style:italic;line-height:1.4;border-top:1px solid var(--bd);padding-top:7px;opacity:.8}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:16px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-bottom:16px}
+@media(max-width:1300px){.g2,.g3,.g21,.g12,.g4{grid-template-columns:1fr 1fr}}
+@media(max-width:780px){.g2,.g3,.g21,.g12,.g4{grid-template-columns:1fr}}
+
+/* ── PANEL ── */
+.panel{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:18px;animation:fadeUp .6s ease forwards;opacity:0}
+.d1{animation-delay:.06s}.d2{animation-delay:.1s}.d3{animation-delay:.14s}
+.d4{animation-delay:.18s}.d5{animation-delay:.22s}.d6{animation-delay:.26s}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:10px}
+.ptitle{font-family:var(--dis);font-size:15px;letter-spacing:1.5px;color:var(--t)}
+.phin{font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:3px}
+.pbadge{font-family:var(--mono);font-size:9px;padding:3px 9px;border-radius:100px;background:rgba(255,255,255,.04);border:1px solid var(--bd2);color:var(--t3);white-space:nowrap;flex-shrink:0}
+.chartbox{position:relative;width:100%}
+
+/* ── FILTER BAR ── */
+.fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:12px 16px;margin-bottom:14px}
+.fbar label{font-family:var(--hi);font-size:11px;color:var(--t3)}
+.fsel,.finp{background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r3);color:var(--t);font-family:var(--mono);font-size:11px;padding:6px 10px;outline:none;transition:border-color .2s}
+.fsel:focus,.finp:focus{border-color:var(--a)}
+.fb{font-family:var(--hi);font-size:11px;padding:6px 14px;border-radius:100px;border:1px solid var(--bd2);color:var(--t2);cursor:pointer;transition:all .2s;background:transparent;white-space:nowrap}
+.fb:hover,.fb.on{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.4);color:var(--a)}
+.fb.red{border-color:rgba(255,59,92,.3);color:var(--red)}.fb.red:hover,.fb.red.on{background:rgba(255,59,92,.1)}
+.fb.grn{border-color:rgba(0,255,157,.3);color:var(--a2)}.fb.grn:hover,.fb.grn.on{background:rgba(0,255,157,.1)}
+.fb.ylw{border-color:rgba(245,158,11,.3);color:var(--warn)}.fb.ylw:hover,.fb.ylw.on{background:rgba(245,158,11,.1)}
+.fb.pur{border-color:rgba(168,85,247,.3);color:var(--a4)}.fb.pur:hover,.fb.pur.on{background:rgba(168,85,247,.1)}
+.sep{width:1px;height:22px;background:var(--bd2);margin:0 2px;flex-shrink:0}
+.swrap{position:relative;flex:1;min-width:180px}
+.swrap input{width:100%;background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--r3);color:var(--t);font-family:var(--mono);font-size:11px;padding:7px 12px 7px 30px;outline:none;transition:border-color .2s}
+.swrap input:focus{border-color:var(--a)}
+.swrap::before{content:'🔍';position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px}
+.expbtn{font-family:var(--hi);font-size:11px;padding:6px 13px;border-radius:var(--r3);background:rgba(0,255,157,.07);border:1px solid rgba(0,255,157,.2);color:var(--a2);cursor:pointer;transition:all .2s;white-space:nowrap}
+.expbtn:hover{background:rgba(0,255,157,.14)}
+
+/* ── TABLE ── */
+.twrap{overflow-x:auto;border-radius:var(--r3)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{font-family:var(--hi);font-size:10px;color:var(--t3);padding:10px 12px;text-align:right;border-bottom:1px solid var(--bd2);position:sticky;top:0;background:var(--sf2);white-space:nowrap;cursor:pointer;user-select:none;transition:color .2s;letter-spacing:.03em}
+thead th:first-child{text-align:left}
+thead th:hover{color:var(--a)}
+thead th.sa::after{content:' ↑';color:var(--a)}
+thead th.sd::after{content:' ↓';color:var(--a)}
+tbody tr{border-bottom:1px solid rgba(255,255,255,.022);transition:background .15s}
+tbody tr:hover{background:rgba(0,212,255,.04)}
+td{padding:9px 12px;text-align:right;vertical-align:middle}
+td:first-child{text-align:left}
+.iname{font-size:12px;font-weight:600;color:var(--t);max-width:220px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.iunit{font-family:var(--mono);font-size:9px;color:var(--t3);background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;display:inline-block;margin-top:3px}
+.mono{font-family:var(--mono)}.pos{color:var(--a2)}.neg{color:var(--red)}.wc{color:var(--warn)}.acc{color:var(--a)}
+.tag{font-family:var(--mono);font-size:9px;padding:2px 9px;border-radius:100px;display:inline-block;white-space:nowrap;font-weight:600}
+.tdead{background:rgba(74,85,104,.15);color:#94a3b8;border:1px solid rgba(74,85,104,.3)}
+.tslow{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.25)}
+.tact{background:rgba(0,255,157,.1);color:var(--a2);border:1px solid rgba(0,255,157,.25)}
+.tfast{background:rgba(0,212,255,.1);color:var(--a);border:1px solid rgba(0,212,255,.25)}
+.tneg{background:rgba(255,59,92,.15);color:var(--red);border:1px solid rgba(255,59,92,.3)}
+.bmini{height:4px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:5px}
+.bfill{height:100%;border-radius:2px;transition:width 1s ease}
+.pginfo{font-family:var(--mono);font-size:10px;color:var(--t3);text-align:center;padding:9px}
+.pgbtns{display:flex;justify-content:center;gap:5px;padding:8px;flex-wrap:wrap}
+.pgbtn{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid var(--bd2);background:transparent;color:var(--t2);cursor:pointer;transition:all .2s}
+.pgbtn:hover,.pgbtn.active{background:rgba(0,212,255,.1);border-color:rgba(0,212,255,.4);color:var(--a)}
+
+/* ── STAT ROW ── */
+.srow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.srow:last-child{border-bottom:none}
+.slabel{font-family:var(--hi);font-size:12px;color:var(--t2)}
+.sval{font-family:var(--mono);font-size:13px;font-weight:600}
+
+/* ── PROGRESS BAR ── */
+.prow{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.plabel{font-family:var(--hi);font-size:12px;color:var(--t2);min-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pbar{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.pfill{height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.17,.67,.35,1.2)}
+.pval{font-family:var(--mono);font-size:11px;color:var(--t2);min-width:110px;text-align:right;flex-shrink:0}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap}
+.tab{font-family:var(--hi);font-size:11px;padding:7px 16px;border-radius:100px;border:1px solid var(--bd2);color:var(--t3);cursor:pointer;transition:all .2s}
+.tab.active{background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.3);color:var(--a)}
+
+/* ── EXPLAIN BOX ── */
+.exbox{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:var(--r2);padding:14px 16px;margin-bottom:16px;font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8}
+.exbox strong{color:var(--a)}
+
+/* ── AMOUNT TOOLTIP ── */
+.amt-tip{
+  position:relative;
+  display:inline;
+  cursor:help;
+  border-bottom:1.5px dashed rgba(0,212,255,.5);
+  padding-bottom:1px;
+}
+.amt-tip:hover{border-bottom-color:var(--a)}
+
+/* Global floating tooltip box */
+#amtTooltip{
+  position:fixed;
+  z-index:999999;
+  display:none;
+  background:linear-gradient(135deg,#0a1525,#142038);
+  border:1px solid rgba(0,212,255,.45);
+  border-radius:12px;
+  padding:12px 18px;
+  font-family:'Space Grotesk',sans-serif;
+  pointer-events:none;
+  box-shadow:0 16px 48px rgba(0,0,0,.75), 0 0 0 1px rgba(0,212,255,.08), 0 0 30px rgba(0,212,255,.08);
+  max-width:380px;
+  min-width:180px;
+}
+#amtTooltip .tip-label{
+  font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(0,212,255,.55);margin-bottom:5px;display:block;
+}
+#amtTooltip .tip-exact{
+  font-family:'JetBrains Mono',monospace;
+  font-size:15px;font-weight:700;
+  color:#00d4ff;
+  display:block;margin-bottom:4px;letter-spacing:.02em;
+}
+#amtTooltip .tip-words{
+  font-size:12px;font-weight:500;
+  color:#cbd5e1;
+  display:block;line-height:1.5;
+}
+
+/* ── ALERT CARDS ── */
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
+.acard{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--r2);padding:14px;display:flex;gap:12px;align-items:flex-start;transition:all .2s;cursor:default}
+.acard:hover{border-color:rgba(255,59,92,.4);transform:translateY(-2px)}
+.acard.wcard:hover{border-color:rgba(245,158,11,.4)}
+.aico{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ared{background:rgba(255,59,92,.15)}.ayel{background:rgba(245,158,11,.15)}.ablu{background:rgba(0,212,255,.15)}.agrn{background:rgba(0,255,157,.15)}
+.abody{flex:1;min-width:0}
+.aname{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t)}
+.ameta{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:2px}
+.aval{font-family:var(--mono);font-size:13px;font-weight:700;margin-top:6px}
+.aexpl{font-family:var(--hi);font-size:11px;color:var(--t2);margin-top:5px;line-height:1.5}
+
+/* ── SCORE METER ── */
+.smeter{text-align:center;padding:18px 0}
+.snum{font-family:var(--dis);font-size:80px;line-height:1}
+.ssubl{font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:4px}
+.sgrade{display:inline-block;font-family:var(--dis);font-size:20px;padding:5px 24px;border-radius:100px;margin-top:12px;letter-spacing:2px}
+
+/* ── DECISION CARD ── */
+.dc{background:var(--sf2);border:1px solid var(--bd2);border-left:5px solid var(--a);border-radius:var(--r2);padding:18px;transition:all .2s;cursor:default}
+.dc:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.dch{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.dcicon{font-size:26px;flex-shrink:0;margin-top:2px}
+.dctitle{font-family:var(--hi);font-weight:800;font-size:15px;line-height:1.3}
+.dcbody{font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.9}
+.dcact{display:inline-block;margin-top:10px;font-family:var(--hi);font-size:11px;padding:6px 16px;border-radius:100px;font-weight:700}
+
+/* ── STORY ── */
+.storypanel{background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(0,255,157,.04));border:1px solid rgba(0,212,255,.15);border-radius:var(--r);padding:22px;margin-bottom:18px}
+.storytitle{font-family:var(--hi);font-size:20px;font-weight:800;color:var(--a5);margin-bottom:14px}
+.storybody{font-family:var(--hi);font-size:13px;color:var(--t);line-height:2.2;letter-spacing:.01em}
+.storybody .hl{color:var(--a2);font-weight:800}
+.storybody .bad{color:var(--red);font-weight:800}
+.storybody .wrn{color:var(--a5);font-weight:800}
+
+/* ── ABC ── */
+.abcleg{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.abcb{font-family:var(--hi);font-size:11px;padding:6px 16px;border-radius:100px;display:flex;align-items:center;gap:6px}
+.abcA{background:rgba(0,255,157,.1);color:var(--a2);border:1px solid rgba(0,255,157,.25)}
+.abcB{background:rgba(251,191,36,.1);color:var(--a5);border:1px solid rgba(251,191,36,.25)}
+.abcC{background:rgba(148,163,184,.1);color:var(--t2);border:1px solid rgba(148,163,184,.2)}
+
+/* ── INSIGHT ITEM ── */
+.iitem{background:var(--sf2);border:1px solid var(--bd2);border-radius:var(--r2);padding:11px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:all .2s}
+.iitem:hover{border-color:var(--bd);background:var(--sf3)}
+.irank{font-family:var(--dis);font-size:20px;color:var(--t3);width:28px;flex-shrink:0;text-align:center}
+.ibody{flex:1;min-width:0}
+.iname{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t)}
+.isub{font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:2px}
+.ival{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--a);text-align:right;flex-shrink:0}
+
+/* ── MINI NUMBER VISUAL ── */
+.numvis{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.numv-big{font-family:var(--dis);font-size:16px;line-height:1}
+.numv-sub{font-family:var(--hi);font-size:9px;color:var(--t3)}
+
+/* ── LOADING OVERLAY ── */
+#loadingOverlay{position:fixed;inset:0;background:rgba(3,5,14,.92);z-index:10000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+.spin{width:48px;height:48px;border:3px solid var(--bd2);border-top-color:var(--a);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loadtxt{font-family:var(--hi);font-size:14px;color:var(--t2)}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:16px;font-family:var(--hi);font-size:11px;color:var(--t3);border-top:1px solid var(--bd)}
+
+/* ── CANVAS BG ── */
+#bgc{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.4}
+</style>
+</head>
+<body>
+<canvas id="bgc"></canvas>
+<div id="amtTooltip"><span class="tip-label">Exact Amount</span><span class="tip-exact"></span><span class="tip-words"></span></div>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay"><div class="spin"></div><div class="loadtxt" id="loadTxt">Building your dashboard...</div></div>
+
+<!-- ═══ UPLOAD SCREEN ═══ -->
+<div id="uploadScreen">
+  <div class="upload-inner">
+
+    <!-- Company Badge -->
+    <div class="company-badge">
+      <span class="company-dot"></span>
+      <span class="company-name">Anand Garments Pvt. Ltd.</span>
+    </div>
+
+      <div class="u-logo-wrap">
+        <div class="u-logo">STOCK HQ</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(168,85,247,.8);margin-top:4px;">Powered by Anand Garments Pvt. Ltd.</div>
+        <div class="u-tagline">Inventory Intelligence Dashboard</div>
+      </div>
+
+    <div class="u-divider"></div>
+
+    <!-- Drop Zone -->
+    <div class="u-drop" id="dropZone">
+      <input type="file" id="csvFile" accept=".csv,.CSV,.xlsx,.XLSX,.xls,.XLS">
+      <div class="u-icon-ring">📊</div>
+      <div class="u-drop-title" id="dropTitle">Drop your Excel (.xlsx) या CSV file यहाँ</div>
+      <div class="u-drop-sub">
+        Supports <span>.xlsx</span> <span>.csv</span> &nbsp;·&nbsp; <span>Tally</span> <span>Busy</span> <span>Marg</span> exports &nbsp;·&nbsp; Auto-cleans messy headers
+      </div>
+    </div>
+
+    <!-- Feature Cards -->
+    <div class="u-features">
+      <div class="u-feat">
+        <div class="u-feat-ico">⚡</div>
+        <div class="u-feat-title">Instant Analysis</div>
+        <div class="u-feat-sub">Live KPIs, charts & insights in seconds</div>
+      </div>
+      <div class="u-feat">
+        <div class="u-feat-ico">🎯</div>
+        <div class="u-feat-title">Smart Decisions</div>
+        <div class="u-feat-sub">AI-powered action cards for your stock</div>
+      </div>
+      <div class="u-feat">
+        <div class="u-feat-ico">🔍</div>
+        <div class="u-feat-title">Deep Drill-Down</div>
+        <div class="u-feat-sub">ABC analysis, alerts & health score</div>
+      </div>
+    </div>
+
+    <!-- Required Columns -->
+    <div class="u-cols">
+      <div class="u-cols-label">Auto-detect होने वाले Columns (Excel/CSV दोनों में)</div>
+      <div class="u-pills">
+        <span class="u-pill">Item Details</span>
+        <span class="u-pill">Unit</span>
+        <span class="u-pill">Op. Qty</span>
+        <span class="u-pill">Op. Amt.</span>
+        <span class="u-pill">Qty. In</span>
+        <span class="u-pill">Amt. In</span>
+        <span class="u-pill">Qty. Out</span>
+        <span class="u-pill">Amt. Out</span>
+        <span class="u-pill">Cl. Qty</span>
+        <span class="u-pill">Cl. Amt.</span>
+        <span class="u-pill">Price / Rate</span>
+      </div>
+    </div>
+
+    <div id="parseErr" class="perr"></div>
+    <button class="u-btn" id="loadBtn" onclick="doLoad()">🚀 &nbsp; Open Dashboard</button>
+
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="app">
+  <div class="topbar">
+    <div class="tlogo">Anand Garments<br><span style="font-size:10px;letter-spacing:.12em;opacity:.7;font-weight:600">PVT. LTD.</span></div>
+    <div class="tmeta"><span class="ldot"></span><span id="topMetaText">—</span></div>
+    <div class="tnav">
+      <button class="ntab active" onclick="showPage('overview',this)">📊 Overview</button>
+      <button class="ntab" onclick="showPage('story',this)">📖 Story</button>
+      <button class="ntab" onclick="showPage('inventory',this)">📦 Inventory</button>
+      <button class="ntab" onclick="showPage('alerts',this)">🚨 Alerts</button>
+      <button class="ntab" onclick="showPage('analysis',this)">🔬 Analysis</button>
+      <button class="ntab" onclick="showPage('abc',this)">🅰 ABC</button>
+      <button class="ntab" onclick="showPage('health',this)">💊 Health</button>
+      <button class="ntab" onclick="showPage('decisions',this)">🎯 Decisions</button>
+      <button class="ntab" onclick="showPage('guide',this)">📚 सीखें</button>
+      <button class="newbtn" onclick="resetApp()">+ नई File</button>
+    </div>
+  </div>
+
+  <div class="tickwrap"><div class="ticklabel">📈 LIVE</div><div class="tickcontent" id="ticker"></div></div>
+
+  <div class="content">
+
+    <!-- ══ OVERVIEW ══ -->
+    <div class="page active" id="page-overview">
+      <div class="sectitle"><h2>OVERVIEW</h2><span class="hin">— पूरा हिसाब एक नज़र में</span><div class="secline"></div><span class="secbadge" id="ovBadge">—</span></div>
+      <div class="kgrid" id="kpiGrid"></div>
+
+      <div class="g21">
+        <div class="panel d1">
+          <div class="ph"><div><div class="ptitle">TOP 15 — सबसे ज़्यादा पैसा किसमें बंद है</div><div class="phin">Closing Stock Value के हिसाब से</div></div><span class="pbadge">CLOSING VALUE ₹</span></div>
+          <div class="chartbox" style="height:300px"><canvas id="chBarTop"></canvas></div>
+        </div>
+        <div class="panel d2">
+          <div class="ph"><div><div class="ptitle">UNIT-WISE VALUE</div><div class="phin">किस unit में कितना माल</div></div><span class="pbadge">VALUE %</span></div>
+          <div class="chartbox" style="height:200px"><canvas id="chDonutUnit"></canvas></div>
+          <div id="unitLegend" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div class="g3">
+        <div class="panel d3">
+          <div class="ph"><div><div class="ptitle">INFLOW vs OUTFLOW</div><div class="phin">आया vs गया (Qty)</div></div><span class="pbadge">TOP 10</span></div>
+          <div class="chartbox" style="height:250px"><canvas id="chFlow"></canvas></div>
+        </div>
+        <div class="panel d4">
+          <div class="ph"><div><div class="ptitle">STOCK STATUS</div><div class="phin">item किस हालत में है</div></div><span class="pbadge">COUNT</span></div>
+          <div class="chartbox" style="height:180px"><canvas id="chStatus"></canvas></div>
+          <div id="statusLeg" style="margin-top:12px"></div>
+        </div>
+        <div class="panel d5">
+          <div class="ph"><div><div class="ptitle">VALUE FLOW</div><div class="phin">रुपया आया vs रुपया गया</div></div><span class="pbadge">₹ TOP 8</span></div>
+          <div class="chartbox" style="height:250px"><canvas id="chAmtFlow"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="panel d5">
+          <div class="ph"><div><div class="ptitle">DISPATCH RATE — TOP ITEMS</div><div class="phin">जितना आया उसमें से कितना % भेजा</div></div><span class="pbadge">%</span></div>
+          <div class="chartbox" style="height:250px"><canvas id="chDispatch"></canvas></div>
+        </div>
+        <div class="panel d6">
+          <div class="ph"><div class="ptitle">झटपट जानकारी</div></div>
+          <div id="quickStats"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STORY ══ -->
+    <div class="page" id="page-story">
+      <div class="sectitle"><h2>STOCK STORY</h2><span class="hin">— आपके stock की पूरी कहानी</span><div class="secline"></div></div>
+      <div class="storypanel"><div class="storytitle">📖 आपके Stock की पूरी कहानी — सरल भाषा में!</div><div class="storybody" id="storyText"></div></div>
+      <div class="g3" id="storyKpis" style="margin-bottom:16px"></div>
+      <div class="g2">
+        <div class="panel d4">
+          <div class="ph"><div class="ptitle">VALUE JOURNEY</div><div class="phin">Opening → Closing का सफ़र</div></div>
+          <div class="chartbox" style="height:270px"><canvas id="chWaterfall"></canvas></div>
+        </div>
+        <div class="panel d5">
+          <div class="ph"><div class="ptitle">STOCK HEALTH SNAPSHOT</div></div>
+          <div id="healthSnap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INVENTORY ══ -->
+    <div class="page" id="page-inventory">
+      <div class="sectitle"><h2>FULL INVENTORY</h2><span class="hin">— पूरी सूची, सब कुछ यहाँ है</span><div class="secline"></div><span class="secbadge" id="invCount">0 items</span></div>
+
+      <div class="fbar">
+        <div class="swrap"><input type="text" id="invSearch" placeholder="Item का नाम search करें..." oninput="renderInv()"></div>
+        <div class="sep"></div>
+        <label>Unit:</label>
+        <select class="fsel" id="unitFilter" onchange="renderInv()"><option value="">सभी</option></select>
+        <div class="sep"></div>
+        <label>Status:</label>
+        <button class="fb on" onclick="setInvF('all',this)">सभी</button>
+        <button class="fb grn" onclick="setInvF('active',this)">✓ Active</button>
+        <button class="fb" onclick="setInvF('fast',this)" style="border-color:rgba(0,212,255,.3);color:var(--a)">⚡ Fast</button>
+        <button class="fb ylw" onclick="setInvF('slow',this)">◔ Slow</button>
+        <button class="fb" onclick="setInvF('dead',this)" style="border-color:rgba(74,85,104,.4);color:var(--t2)">● Dead</button>
+        <button class="fb red" onclick="setInvF('neg',this)">⚠ Negative</button>
+        <div class="sep"></div>
+        <label>Value:</label>
+        <select class="fsel" id="valFilter" onchange="renderInv()">
+          <option value="">सभी values</option>
+          <option value="gt10l">₹10 लाख से ज़्यादा</option>
+          <option value="gt1l">₹1 लाख से ज़्यादा</option>
+          <option value="gt10k">₹10 हज़ार से ज़्यादा</option>
+          <option value="lt10k">₹10 हज़ार से कम</option>
+          <option value="zero">Value = 0</option>
+        </select>
+        <div class="sep"></div>
+        <label>Sort:</label>
+        <select class="fsel" id="invSort" onchange="renderInv()">
+          <option value="cl_amt_d">Closing Value ↓ (ज़्यादा पहले)</option>
+          <option value="cl_amt_a">Closing Value ↑ (कम पहले)</option>
+          <option value="qty_in_d">Qty In ↓</option>
+          <option value="qty_out_d">Qty Out ↓</option>
+          <option value="cl_qty_d">Closing Qty ↓</option>
+          <option value="dispatch_d">Dispatch Rate ↓</option>
+          <option value="item_a">Item A-Z</option>
+          <option value="item_d">Item Z-A</option>
+        </select>
+        <button class="expbtn" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+
+      <div class="panel d1" style="padding:0">
+        <div class="twrap" style="max-height:560px;overflow-y:auto">
+          <table>
+            <thead>
+              <tr>
+                <th style="text-align:left">#&nbsp;&nbsp;Item नाम</th>
+                <th onclick="sortBy('unit')">Unit</th>
+                <th onclick="sortBy('op_qty')">Opening<br>Qty</th>
+                <th onclick="sortBy('op_amt')">Opening<br>Value ₹</th>
+                <th onclick="sortBy('qty_in')">आया<br>Qty</th>
+                <th onclick="sortBy('amt_in')">आया<br>Value ₹</th>
+                <th onclick="sortBy('qty_out')">गया<br>Qty</th>
+                <th onclick="sortBy('amt_out')">गया<br>Value ₹</th>
+                <th onclick="sortBy('cl_qty')">बचा<br>Qty</th>
+                <th onclick="sortBy('cl_amt')">बचा<br>Value ₹</th>
+                <th onclick="sortBy('dispatch')">Dispatch<br>Rate %</th>
+                <th onclick="sortBy('cl_price')">Avg<br>Rate ₹</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="invBody"></tbody>
+          </table>
+        </div>
+        <div class="pginfo" id="invInfo"></div>
+        <div class="pgbtns" id="invPg"></div>
+      </div>
+    </div>
+
+    <!-- ══ ALERTS ══ -->
+    <div class="page" id="page-alerts">
+      <div class="sectitle"><h2>ALERTS & WARNINGS</h2><span class="hin">— ध्यान देने वाली बातें</span><div class="secline"></div><span class="secbadge" id="alertBadge">0</span></div>
+      <div class="tabs">
+        <button class="tab active" onclick="setAlertTab('neg',this)">🔴 Negative Stock</button>
+        <button class="tab" onclick="setAlertTab('dead',this)">⚫ Dead Stock</button>
+        <button class="tab" onclick="setAlertTab('highval',this)">💎 High Value Idle</button>
+        <button class="tab" onclick="setAlertTab('slow',this)">⏳ Slow Moving</button>
+      </div>
+      <div id="alertPanel"></div>
+    </div>
+
+    <!-- ══ ANALYSIS ══ -->
+    <div class="page" id="page-analysis">
+      <div class="sectitle"><h2>DEEP ANALYSIS</h2><span class="hin">— गहरा विश्लेषण</span><div class="secline"></div></div>
+
+      <div class="g3">
+        <div class="panel d1">
+          <div class="ph"><div><div class="ptitle">TOP 10 — सबसे ज़्यादा INFLOW</div><div class="phin">सबसे ज़्यादा माल आया</div></div></div>
+          <div id="top10in"></div>
+        </div>
+        <div class="panel d2">
+          <div class="ph"><div><div class="ptitle">TOP 10 — सबसे ज़्यादा OUTFLOW</div><div class="phin">सबसे ज़्यादा माल गया</div></div></div>
+          <div id="top10out"></div>
+        </div>
+        <div class="panel d3">
+          <div class="ph"><div><div class="ptitle">TOP 10 — सबसे ज़्यादा IDLE VALUE</div><div class="phin">आया पर गया नहीं</div></div></div>
+          <div id="top10idle"></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="panel d4">
+          <div class="ph"><div><div class="ptitle">UNIT-WISE SUMMARY</div><div class="phin">Unit के हिसाब से पूरा हिसाब</div></div></div>
+          <div class="twrap">
+            <table>
+              <thead><tr>
+                <th style="text-align:left">Unit</th>
+                <th>Items</th><th>Total आया Qty</th><th>Total आया ₹</th>
+                <th>Total गया Qty</th><th>Total गया ₹</th>
+                <th>Closing Value ₹</th><th>Dispatch %</th>
+              </tr></thead>
+              <tbody id="unitTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel d5">
+          <div class="ph"><div><div class="ptitle">VALUE RANGE DISTRIBUTION</div><div class="phin">कितने items किस value range में</div></div></div>
+          <div class="chartbox" style="height:260px"><canvas id="chRangeDist"></canvas></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="panel d5">
+          <div class="ph"><div><div class="ptitle">CLOSING QTY vs CLOSING VALUE</div><div class="phin">Qty ज़्यादा पर value कम? या कम Qty पर ज़्यादा value?</div></div></div>
+          <div class="chartbox" style="height:280px"><canvas id="chScatter"></canvas></div>
+        </div>
+        <div class="panel d6">
+          <div class="ph"><div><div class="ptitle">DISPATCH RATE DISTRIBUTION</div><div class="phin">items कितने % dispatch rate पर हैं</div></div></div>
+          <div class="chartbox" style="height:280px"><canvas id="chDispDist"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ABC ══ -->
+    <div class="page" id="page-abc">
+      <div class="sectitle"><h2>ABC ANALYSIS</h2><span class="hin">— कौन सा item सबसे ज़रूरी है?</span><div class="secline"></div></div>
+      <div class="exbox">
+        <strong>ABC Analysis क्या है?</strong> — Items को उनकी value के हिसाब से 3 groups में बाँटना:<br>
+        🟢 <strong>A Category (VIP)</strong> — Top 20% items जो ~80% value देते हैं। इन पर सबसे ज़्यादा ध्यान दें!<br>
+        🟡 <strong>B Category</strong> — अगले 30% items, ~15% value। नज़र रखें।<br>
+        ⚪ <strong>C Category</strong> — बाकी 50% items, ~5% value। कम priority।
+      </div>
+      <div class="abcleg">
+        <div class="abcb abcA">🟢 A — VIP Items</div>
+        <div class="abcb abcB">🟡 B — Important</div>
+        <div class="abcb abcC">⚪ C — Regular</div>
+      </div>
+      <div class="g3">
+        <div class="panel d1"><div class="ph"><div class="ptitle">ABC OVERVIEW</div></div><div class="chartbox" style="height:240px"><canvas id="chAbcDnt"></canvas></div></div>
+        <div class="panel d2" style="grid-column:span 2"><div class="ph"><div class="ptitle">ABC — VALUE vs ITEM COUNT</div></div><div class="chartbox" style="height:240px"><canvas id="chAbcBar"></canvas></div></div>
+      </div>
+      <div class="g3" id="abcSummary"></div>
+      <div class="panel d4">
+        <div class="ph"><div class="ptitle">ABC — FULL ITEM LIST</div><span class="pbadge" id="abcCount">—</span></div>
+        <div class="tabs">
+          <button class="tab active" onclick="setAbcTab('A',this)">🟢 A Category (VIP)</button>
+          <button class="tab" onclick="setAbcTab('B',this)">🟡 B Category</button>
+          <button class="tab" onclick="setAbcTab('C',this)">⚪ C Category</button>
+        </div>
+        <div id="abcList"></div>
+      </div>
+    </div>
+
+    <!-- ══ HEALTH ══ -->
+    <div class="page" id="page-health">
+      <div class="sectitle"><h2>HEALTH REPORT</h2><span class="hin">— आपके stock की सेहत</span><div class="secline"></div></div>
+      <div class="exbox">
+        <strong>Health Score क्या है?</strong> — 0 से 100 का एक नंबर। <strong>80+</strong> = शानदार 🎉 &nbsp;|&nbsp; <strong>60-79</strong> = ठीक-ठाक 👍 &nbsp;|&nbsp; <strong>40-59</strong> = सुधार चाहिए ⚠️ &nbsp;|&nbsp; <strong>40 से कम</strong> = तुरंत action लें! 🚨
+      </div>
+      <div class="g3">
+        <div class="panel d1" style="text-align:center">
+          <div class="ptitle" style="margin-bottom:4px">OVERALL HEALTH SCORE</div>
+          <div class="smeter"><div class="snum" id="healthScore">—</div><div class="ssubl">100 में से</div><div class="sgrade" id="healthGrade">—</div></div>
+          <div id="healthDet" style="margin-top:14px;text-align:left"></div>
+        </div>
+        <div class="panel d2" style="grid-column:span 2">
+          <div class="ph"><div class="ptitle">HEALTH METRICS RADAR</div></div>
+          <div class="chartbox" style="height:290px"><canvas id="chRadar"></canvas></div>
+        </div>
+      </div>
+      <div class="g3">
+        <div class="panel d3"><div class="ph"><div class="ptitle">STATUS BREAKDOWN %</div></div><div id="healthBars"></div></div>
+        <div class="panel d4"><div class="ph"><div class="ptitle">RISK ANALYSIS</div><span class="pbadge">Negative Items</span></div><div id="riskPanel"></div></div>
+        <div class="panel d5"><div class="ph"><div class="ptitle">EFFICIENCY METRICS</div></div><div id="effPanel"></div></div>
+      </div>
+      <div class="panel d6">
+        <div class="ph"><div class="ptitle">ACTIONABLE RECOMMENDATIONS</div><span class="pbadge">क्या करें?</span></div>
+        <div id="recs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-top:4px"></div>
+      </div>
+    </div>
+
+    <!-- ══ DECISIONS ══ -->
+    <div class="page" id="page-decisions">
+      <div class="sectitle"><h2>DECISIONS & ACTION PLAN</h2><span class="hin">— अभी क्या करना चाहिए?</span><div class="secline"></div></div>
+      <div class="exbox">
+        <strong>यह page आपके लिए है!</strong> — हर card में साफ़ बताया है: <strong>क्या problem है</strong> → <strong>क्यों है</strong> → <strong>क्या करें</strong>। बिल्कुल simple भाषा में, कोई confusion नहीं!
+      </div>
+
+      <!-- SUMMARY BAR -->
+      <div class="g4" id="decSummary" style="margin-bottom:18px"></div>
+
+      <div id="decCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;margin-bottom:22px"></div>
+
+      <div class="panel d5">
+        <div class="ph"><div class="ptitle">PRIORITY ACTION LIST — आज से शुरू करें</div></div>
+        <div id="actionList"></div>
+      </div>
+    </div>
+
+
+    <!-- ══ GUIDE / LEARNINGS ══ -->
+    <div class="page" id="page-guide">
+      <div class="sectitle"><h2>📚 सीखें — LEARNINGS</h2><span class="hin">— हर column का मतलब, एकदम आसान भाषा में</span><div class="secline"></div></div>
+
+      <div class="exbox">
+        <strong>यह section किसके लिए है?</strong> — जो लोग पहली बार stock report देख रहे हैं, या जिन्हें Excel के ये column names confuse करते हैं — उनके लिए। हर चीज़ बिल्कुल आसान भाषा में समझाई गई है! 🙌
+      </div>
+
+      <!-- MAIN COLUMNS GRID -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-bottom:24px">
+
+        <!-- Item Details -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">📦</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a);font-weight:700">Item Details</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">सामान का नाम</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            आपके warehouse में जो भी सामान रखा है, उसका नाम।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            जैसे — <span style="color:var(--a2)">"10429 A Metre"</span>, <span style="color:var(--a2)">"Sugar 50kg"</span>, <span style="color:var(--a2)">"Blue Pen Box"</span> वगैरह।<br>
+            हर अलग सामान की एक अलग row होती है।
+          </div>
+          <div style="margin-top:12px;background:rgba(0,212,255,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a)">
+            💡 दुकान में जैसे अलग-अलग चीज़ें होती हैं — चावल, दाल, तेल — वैसे ही यहाँ अलग-अलग items होते हैं।
+          </div>
+        </div>
+
+        <!-- Unit -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a2);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">📏</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a2);font-weight:700">Unit</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">माप की इकाई</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            सामान को किस तरह से नापा/गिना जाता है।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            जैसे — <span style="color:var(--a2)">Metre</span> (कपड़ा), <span style="color:var(--a2)">KG</span> (अनाज), <span style="color:var(--a2)">Piece/Pcs</span> (बोतल, बॉक्स), <span style="color:var(--a2)">Litre</span> (तेल) वगैरह।
+          </div>
+          <div style="margin-top:12px;background:rgba(0,255,157,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a2)">
+            💡 जैसे दूध लीटर में, चावल किलो में, कपड़ा मीटर में — वैसे ही हर item की अपनी unit होती है।
+          </div>
+        </div>
+
+        <!-- Op. Qty -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid #06b6d4;border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">🔓</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:#06b6d4;font-weight:700">Op. Qty</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Opening Quantity — शुरुआत का माल (गिनती)</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            महीने/साल की शुरुआत में कितना माल था — सिर्फ गिनती में।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            जैसे 1 अप्रैल को godown में 500 बोरी चावल थी — तो Op. Qty = 500
+          </div>
+          <div style="margin-top:12px;background:rgba(6,182,212,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:#06b6d4">
+            💡 मान लो आपने नया हिसाब-किताब शुरू किया। पहले दिन जितना माल था — वो Op. Qty है।
+          </div>
+        </div>
+
+        <!-- Price (Op.) -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a5);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">💵</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a5);font-weight:700">Price (Opening)</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">शुरुआत का भाव (एक unit का)</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            शुरुआत में एक unit सामान की कीमत कितनी थी।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            जैसे शुरुआत में चावल का भाव था ₹45 प्रति किलो — तो Price = 45
+          </div>
+          <div style="margin-top:12px;background:rgba(251,191,36,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a5)">
+            💡 यह एक unit का दाम है — पूरे माल का नहीं। पूरा = Qty × Price = Op. Amt.
+          </div>
+        </div>
+
+        <!-- Op. Amt. -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid #06b6d4;border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">💼</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:#06b6d4;font-weight:700">Op. Amt.</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Opening Amount — शुरुआत की कुल Value</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            शुरुआत में जितना माल था, उसकी कुल रुपयों में कीमत।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            Op. Qty × Price = Op. Amt.<br>
+            500 बोरी × ₹45 = ₹22,500 → यही Op. Amt. है।
+          </div>
+          <div style="margin-top:12px;background:rgba(6,182,212,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:#06b6d4">
+            💡 शुरुआत में आपके godown में कुल कितने रुपये का माल बंद था।
+          </div>
+        </div>
+
+        <!-- Qty. In -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a2);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">📥</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a2);font-weight:700">Qty. In</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">इस period में कितना माल आया (गिनती)</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            इस महीने/साल में आपने कितना नया माल खरीदा या warehouse में लाए।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            जैसे इस महीने 1,023 मीटर कपड़ा आया — तो Qty. In = 1023
+          </div>
+          <div style="margin-top:12px;background:rgba(0,255,157,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a2)">
+            💡 दुकान में नया माल आया — उसकी गिनती। Purchase = Qty. In
+          </div>
+        </div>
+
+        <!-- Avg. Price (In) -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a2);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">🏷️</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a2);font-weight:700">Avg. Price (Qty. In वाला)</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Average Purchase Rate — खरीद का औसत भाव</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            जो माल आया, वो औसतन कितने रुपये प्रति unit में खरीदा।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            अगर अलग-अलग बार अलग-अलग भाव में खरीदा — तो सबका औसत निकाला जाता है।<br>
+            जैसे ₹130 + ₹140 का average = ₹135
+          </div>
+          <div style="margin-top:12px;background:rgba(0,255,157,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a2)">
+            💡 सब खरीद का मिला-जुला भाव। इससे पता चलता है खरीद महँगी थी या सस्ती।
+          </div>
+        </div>
+
+        <!-- Amt. In -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a2);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">💰</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a2);font-weight:700">Amt. In</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Amount In — खरीद पर कुल पैसा लगा</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            जो माल आया, उसे खरीदने में कुल कितने रुपये लगे।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            Qty. In × Avg. Price = Amt. In<br>
+            1023 मीटर × ₹135 = ₹1,38,105 → यही Amt. In है।
+          </div>
+          <div style="margin-top:12px;background:rgba(0,255,157,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a2)">
+            💡 इस period में purchase पर कुल कितना खर्च हुआ। यह आपकी Total Purchase Value है।
+          </div>
+        </div>
+
+        <!-- Qty. Out -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a3);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">📤</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a3);font-weight:700">Qty. Out</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">इस period में कितना माल गया (गिनती)</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            इस महीने/साल में कितना माल बेचा, issue किया या भेजा।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            जैसे इस महीने 0 मीटर कपड़ा बिका — तो Qty. Out = 0<br>
+            अगर 500 बिके — तो Qty. Out = 500
+          </div>
+          <div style="margin-top:12px;background:rgba(255,107,53,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a3)">
+            💡 दुकान से जितना माल गया — बिका, दिया, या भेजा। Sales = Qty. Out
+          </div>
+        </div>
+
+        <!-- Avg. Price (Out) -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a3);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">🏷️</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a3);font-weight:700">Avg. Price (Qty. Out वाला)</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Average Sale/Issue Rate — बिक्री का औसत भाव</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            जो माल गया, वो औसतन कितने रुपये प्रति unit में बिका/भेजा गया।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            Note: CSV में <strong style="color:var(--a)">Avg. Price दो बार</strong> आता है —<br>
+            पहला वाला = खरीद का भाव (Qty. In के बाद)<br>
+            दूसरा वाला = बिक्री का भाव (Qty. Out के बाद)
+          </div>
+          <div style="margin-top:12px;background:rgba(255,107,53,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a3)">
+            💡 अगर यह Avg. Price In से ज़्यादा है — मुनाफ़ा। कम है — नुकसान।
+          </div>
+        </div>
+
+        <!-- Amt. Out -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a3);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">💸</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a3);font-weight:700">Amt. Out</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Amount Out — बिक्री से कुल पैसा मिला</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            जो माल गया, उससे कुल कितने रुपये मिले (या value निकली)।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            Qty. Out × Avg. Price (Out) = Amt. Out<br>
+            अगर 0 बिका तो Amt. Out = ₹0
+          </div>
+          <div style="margin-top:12px;background:rgba(255,107,53,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a3)">
+            💡 यह आपकी Total Sales Value है। Amt. In से compare करें — फ़र्क = मुनाफ़ा या नुकसान।
+          </div>
+        </div>
+
+        <!-- Cl. Qty -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a5);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">🏦</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a5);font-weight:700">Cl. Qty</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Closing Quantity — अभी बचा माल (गिनती)</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            अभी इस वक्त godown में कितना माल बचा है — सिर्फ गिनती में।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            Formula: Op. Qty + Qty. In − Qty. Out = Cl. Qty<br>
+            0 + 1023 − 0 = 1023 मीटर बचा
+          </div>
+          <div style="margin-top:12px;background:rgba(251,191,36,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a5)">
+            💡 अगर Cl. Qty negative आए — मतलब system में गड़बड़ है! Physical count ज़रूर करें।
+          </div>
+        </div>
+
+        <!-- Price (Cl.) -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a5);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">💹</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a5);font-weight:700">Price (Closing)</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">अभी का भाव (एक unit का)</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            अभी एक unit सामान की कीमत कितनी है।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            यह वो rate है जिस पर अभी stock valued है।<br>
+            जैसे अभी कपड़े का भाव ₹135 प्रति मीटर।
+          </div>
+          <div style="margin-top:12px;background:rgba(251,191,36,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a5)">
+            💡 Cl. Amt. = Cl. Qty × यह Price। यानी बचे माल की कुल value निकालने के लिए।
+          </div>
+        </div>
+
+        <!-- Cl. Amt. -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-left:5px solid var(--a4);border-radius:var(--r);padding:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="font-size:32px">🎯</div>
+            <div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--a4);font-weight:700">Cl. Amt.</div>
+              <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-top:2px">Closing Amount — अभी बचे माल की कुल Value</div>
+            </div>
+          </div>
+          <div style="font-family:var(--hi);font-size:14px;color:var(--t);line-height:1.9;font-weight:600;margin-bottom:10px">
+            अभी godown में जो माल बचा है, उसकी कुल रुपयों में कीमत।
+          </div>
+          <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.8">
+            Cl. Qty × Closing Price = Cl. Amt.<br>
+            1023 × ₹135 = ₹1,38,105 → यही Cl. Amt. है।
+          </div>
+          <div style="margin-top:12px;background:rgba(168,85,247,.06);border-radius:8px;padding:10px 14px;font-family:var(--hi);font-size:11px;color:var(--a4)">
+            💡 यह सबसे ज़रूरी नंबर है! इससे पता चलता है अभी आपके पास कितने रुपये का माल बचा है।
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FULL ROW EXAMPLE -->
+      <div class="panel d3" style="margin-bottom:20px">
+        <div class="ph"><div class="ptitle">📊 एक पूरी Row का उदाहरण — ऊपर से नीचे</div></div>
+        <div style="font-family:var(--hi);font-size:13px;color:var(--t2);line-height:1.8;margin-bottom:16px">
+          मान लो CSV में यह row है: <span style="font-family:var(--mono);color:var(--a);font-size:12px">10429 A | Metre | 0 | 0 | 0 | 1023 | 135 | 138105 | 0 | 0 | 0 | 1023 | 135 | 138105</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+          <div style="background:var(--sf2);border-radius:8px;padding:12px 14px;border-left:3px solid #06b6d4">
+            <div style="font-family:var(--mono);font-size:10px;color:#06b6d4;margin-bottom:4px">OPENING (शुरुआत)</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">
+              Op. Qty = <strong style="color:var(--t)">0</strong> (पहले कुछ नहीं था)<br>
+              Price = <strong style="color:var(--t)">₹0</strong><br>
+              Op. Amt. = <strong style="color:var(--t)">₹0</strong>
+            </div>
+          </div>
+          <div style="background:var(--sf2);border-radius:8px;padding:12px 14px;border-left:3px solid var(--a2)">
+            <div style="font-family:var(--mono);font-size:10px;color:var(--a2);margin-bottom:4px">INFLOW (आया)</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">
+              Qty. In = <strong style="color:var(--t)">1023 Metre</strong> (इतना माल आया)<br>
+              Avg. Price = <strong style="color:var(--t)">₹135/मीटर</strong><br>
+              Amt. In = <strong style="color:var(--t)">₹1,38,105</strong> (कुल खरीद)
+            </div>
+          </div>
+          <div style="background:var(--sf2);border-radius:8px;padding:12px 14px;border-left:3px solid var(--a3)">
+            <div style="font-family:var(--mono);font-size:10px;color:var(--a3);margin-bottom:4px">OUTFLOW (गया)</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">
+              Qty. Out = <strong style="color:var(--t)">0 Metre</strong> (कुछ नहीं बिका)<br>
+              Avg. Price = <strong style="color:var(--t)">₹0</strong><br>
+              Amt. Out = <strong style="color:var(--t)">₹0</strong>
+            </div>
+          </div>
+          <div style="background:var(--sf2);border-radius:8px;padding:12px 14px;border-left:3px solid var(--a5)">
+            <div style="font-family:var(--mono);font-size:10px;color:var(--a5);margin-bottom:4px">CLOSING (बचा)</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">
+              Cl. Qty = <strong style="color:var(--t)">1023 Metre</strong> (यही बचा)<br>
+              Price = <strong style="color:var(--t)">₹135/मीटर</strong><br>
+              Cl. Amt. = <strong style="color:var(--a5)">₹1,38,105</strong> ← यह most important!
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.15);border-radius:8px;padding:12px 16px;font-family:var(--hi);font-size:12px;color:var(--a2);line-height:1.8">
+          <strong>🔍 इस example से क्या पता चला?</strong><br>
+          इस item में 1023 मीटर कपड़ा आया, एक भी नहीं बिका। पूरा ₹1,38,105 का माल अभी भी godown में पड़ा है। यह <strong>SLOW stock</strong> है — इसे बेचने की ज़रूरत है!
+        </div>
+      </div>
+
+      <!-- STATUS MEANINGS -->
+      <div class="panel d4" style="margin-bottom:20px">
+        <div class="ph"><div class="ptitle">🏷️ Status Tags का मतलब — Dashboard में दिखने वाले रंगीन labels</div></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+          <div style="background:rgba(0,255,157,.08);border:1px solid rgba(0,255,157,.2);border-radius:10px;padding:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span class="tag tact">✓ ACTIVE</span>
+            </div>
+            <div style="font-family:var(--hi);font-size:13px;color:var(--t);font-weight:700;margin-bottom:6px">सब ठीक है! 👍</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">माल आया भी और गया भी। यानी item बिक रही है। यह good status है।</div>
+          </div>
+          <div style="background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span class="tag tfast">⚡ FAST</span>
+            </div>
+            <div style="font-family:var(--hi);font-size:13px;color:var(--t);font-weight:700;margin-bottom:6px">बहुत तेज़ बिकती है! 🚀</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">जितना माल आया उससे ज़्यादा बिका। मतलब पुराना stock भी निकला। हमेशा stock रखें!</div>
+          </div>
+          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span class="tag tslow">◔ SLOW</span>
+            </div>
+            <div style="font-family:var(--hi);font-size:13px;color:var(--t);font-weight:700;margin-bottom:6px">माल आया पर बिका नहीं ⚠️</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">Qty. In है पर Qty. Out = 0। माल खरीदा पर कोई buyer नहीं। Offer/discount देने का सोचें।</div>
+          </div>
+          <div style="background:rgba(74,85,104,.1);border:1px solid rgba(74,85,104,.3);border-radius:10px;padding:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span class="tag tdead">● DEAD</span>
+            </div>
+            <div style="font-family:var(--hi);font-size:13px;color:var(--t);font-weight:700;margin-bottom:6px">पूरी तरह बंद पड़ा है 💀</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">न कुछ आया, न कुछ गया। Opening का माल वैसे ही पड़ा है। पैसा block है — निकालें!</div>
+          </div>
+          <div style="background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.25);border-radius:10px;padding:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span class="tag tneg">⚠ NEGATIVE</span>
+            </div>
+            <div style="font-family:var(--hi);font-size:13px;color:var(--t);font-weight:700;margin-bottom:6px">गड़बड़ है — तुरंत देखें! 🚨</div>
+            <div style="font-family:var(--hi);font-size:12px;color:var(--t2);line-height:1.7">Closing Qty negative है — मतलब system में जितना दिखता है उससे ज़्यादा भेज दिया। Data entry गलत है या माल गायब है। Physical count करें!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUICK GLOSSARY -->
+      <div class="panel d5">
+        <div class="ph"><div class="ptitle">📖 Quick Glossary — ये शब्द याद कर लो</div></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">
+          <div class="srow" style="padding:10px 0"><span class="slabel">Opening = शुरुआत</span><span class="sval acc">Period की पहली तारीख</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Closing = अंत</span><span class="sval acc">Period की आखिरी तारीख</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Qty = Quantity</span><span class="sval acc">गिनती / संख्या</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Amt = Amount</span><span class="sval acc">रुपयों में कीमत</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Avg = Average</span><span class="sval acc">औसत / मिला-जुला</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">In = आया</span><span class="sval pos">Purchase / Receipt</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Out = गया</span><span class="sval" style="color:var(--a3)">Sale / Issue</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Cl. = Closing</span><span class="sval acc">अभी का / बचा हुआ</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Op. = Opening</span><span class="sval" style="color:#06b6d4">शुरुआत का</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Unit = माप</span><span class="sval acc">KG, Metre, Pcs...</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Dispatch Rate</span><span class="sval acc">आया में से % बिका</span></div>
+          <div class="srow" style="padding:10px 0"><span class="slabel">Dead Stock</span><span class="sval neg">बिल्कुल न हिला माल</span></div>
+        </div>
+      </div>
+
+    </div>
+    <!-- ══ END GUIDE ══ -->
+  </div>
+  <footer id="footerTxt">Anand Garments Pvt. Ltd. — Stock Dashboard</footer>
+</div>
+
+<script>
+// ═══════════════ BACKGROUND ANIMATION
+(function(){
+  const c=document.getElementById('bgc'),ctx=c.getContext('2d');
+  let W,H,pts=[],csticks=[],lo=0;
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+  resize();window.addEventListener('resize',resize);
+  for(let i=0;i<50;i++)pts.push({x:Math.random()*1e4,y:Math.random()*1e4,r:Math.random()*1.8+.4,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,col:Math.random()>.5?'rgba(0,212,255,':'rgba(0,255,157,',o:Math.random()*.4+.1});
+  function gc(x){const o=40+Math.random()*100,cl=o+(Math.random()-.5)*35,hi=Math.max(o,cl)+Math.random()*18,lo2=Math.min(o,cl)-Math.random()*18;return{x,o,cl,hi,lo:lo2,w:16}}
+  for(let i=0;i<18;i++)csticks.push(gc(60+i*90));
+  let lpts=[],lx=0,ly=0;
+  function mkLine(){lpts=[];lx=0;ly=H*.7;for(let i=0;i<200;i++){ly+=(Math.random()-.48)*7;ly=Math.max(H*.15,Math.min(H*.88,ly));lpts.push({x:lx,y:ly});lx+=W/200}}
+  mkLine();window.addEventListener('resize',mkLine);
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save();ctx.translate(-(lo%W),0);
+    if(lpts.length){ctx.beginPath();ctx.moveTo(lpts[0].x,lpts[0].y);for(const p of lpts)ctx.lineTo(p.x,p.y);ctx.strokeStyle='rgba(0,212,255,.07)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.lineTo(lpts[lpts.length-1].x,H);ctx.lineTo(lpts[0].x,H);ctx.closePath();
+    const g=ctx.createLinearGradient(0,H*.3,0,H);g.addColorStop(0,'rgba(0,212,255,.04)');g.addColorStop(1,'rgba(0,212,255,0)');ctx.fillStyle=g;ctx.fill()}
+    ctx.restore();lo+=.35;
+    for(const cs of csticks){const up=cs.cl>=cs.o,col=up?'rgba(0,255,157,.08)':'rgba(255,59,92,.08)',lc=up?'rgba(0,255,157,.1)':'rgba(255,59,92,.1)';ctx.beginPath();ctx.moveTo(cs.x,H-cs.hi*1.6);ctx.lineTo(cs.x,H-cs.lo*1.6);ctx.strokeStyle=lc;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle=col;const yt=H-Math.max(cs.o,cs.cl)*1.6,yh=Math.abs(cs.cl-cs.o)*1.6||2;ctx.fillRect(cs.x-cs.w/2,yt,cs.w,yh);cs.x-=.18;if(cs.x<-60)cs.x=W+60}
+    for(const p of pts){ctx.beginPath();ctx.arc(p.x%W,p.y%H,p.r,0,Math.PI*2);ctx.fillStyle=p.col+p.o+')';ctx.fill();p.x+=p.vx;p.y+=p.vy}
+    ctx.strokeStyle='rgba(255,255,255,.012)';ctx.lineWidth=1;
+    for(let i=0;i<W;i+=100){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke()}
+    for(let i=0;i<H;i+=80){ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(W,i);ctx.stroke()}
+    requestAnimationFrame(draw)
+  }draw();
+})();
+
+// ═══════════════ INDIAN NUMBER FORMAT — ONLY: हज़ार, लाख, करोड़
+// ── EXACT Indian number format — NO rounding, full precision, Indian comma system
+// fmtINR: always shows exact value with Indian commas. 'short' = compact label for charts only
+function inrComma(n) {
+  // Converts number to Indian comma format: 59951662 → 5,99,51,662
+  if(n===undefined||n===null||isNaN(n)) return '0';
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  // Handle decimals
+  const parts = abs.toString().split('.');
+  let intPart = parts[0];
+  const decPart = parts[1] ? '.' + parts[1] : '';
+  // Indian grouping: last 3 digits, then groups of 2
+  if(intPart.length <= 3) return sign + intPart + decPart;
+  const last3 = intPart.slice(-3);
+  const rest = intPart.slice(0, -3);
+  const grouped = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+  return sign + grouped + ',' + last3 + decPart;
+}
+
+function fmtINR(n, short=false) {
+  if(n===undefined||n===null||isNaN(n)) return '₹0';
+  const abs = Math.abs(n), sign = n<0 ? '-' : '';
+  if(abs===0) return '₹0';
+  // short=true: used only in chart axis labels / ticker — compact is ok there
+  if(short) {
+    if(abs>=1e7) return sign+'₹'+(abs/1e7).toFixed(2)+' Cr';
+    if(abs>=1e5) return sign+'₹'+(abs/1e5).toFixed(2)+' L';
+    if(abs>=1000) return sign+'₹'+(abs/1000).toFixed(1)+' K';
+    return sign+'₹'+abs.toFixed(0);
+  }
+  // Full exact display — Indian comma format, no rounding
+  const intAbs = Math.floor(abs);
+  const dec = abs - intAbs;
+  // Show paise only if non-zero and meaningful
+  const decStr = dec > 0.004 ? '.' + dec.toFixed(2).slice(2) : '';
+  return sign + '₹' + inrComma(intAbs) + decStr;
+}
+
+// ═══════════════ AMOUNT → WORDS (Indian: करोड़, लाख, हज़ार)
+function amtToWords(n) {
+  if(!n||isNaN(n)||n===0) return '₹ शून्य';
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '− ' : '';
+
+  const ones=['','एक','दो','तीन','चार','पाँच','छह','सात','आठ','नौ',
+    'दस','ग्यारह','बारह','तेरह','चौदह','पंद्रह','सोलह','सत्रह','अठारह','उन्नीस',
+    'बीस','इक्कीस','बाईस','तेईस','चौबीस','पच्चीस','छब्बीस','सत्ताईस','अट्ठाईस','उनतीस',
+    'तीस','इकतीस','बत्तीस','तैंतीस','चौंतीस','पैंतीस','छत्तीस','सैंतीस','अड़तीस','उनतालीस',
+    'चालीस','इकतालीस','बयालीस','तैंतालीस','चवालीस','पैंतालीस','छियालीस','सैंतालीस','अड़तालीस','उनचास',
+    'पचास','इक्यावन','बावन','तिरपन','चौवन','पचपन','छप्पन','सत्तावन','अट्ठावन','उनसठ',
+    'साठ','इकसठ','बासठ','तिरसठ','चौंसठ','पैंसठ','छियासठ','सड़सठ','अड़सठ','उनहत्तर',
+    'सत्तर','इकहत्तर','बहत्तर','तिहत्तर','चौहत्तर','पचहत्तर','छिहत्तर','सतहत्तर','अठहत्तर','उन्यासी',
+    'अस्सी','इक्यासी','बयासी','तिरासी','चौरासी','पचासी','छियासी','सत्तासी','अट्ठासी','नवासी',
+    'नब्बे','इक्यानवे','बानवे','तिरानवे','चौरानवे','पचानवे','छियानवे','सत्तानवे','अट्ठानवे','निन्यानवे'];
+
+  function twoDigit(n){ return n<100 ? ones[n] : ''; }
+  function threeDigit(n){
+    if(n===0)return'';
+    const h=Math.floor(n/100), rem=n%100;
+    const hs=h>0?ones[h]+' सौ':'';
+    const rs=rem>0?twoDigit(rem):'';
+    return [hs,rs].filter(Boolean).join(' ');
+  }
+
+  const cr   = Math.floor(abs/1e7);
+  const lakh = Math.floor((abs%1e7)/1e5);
+  const hzr  = Math.floor((abs%1e5)/1e3);
+  const rem  = Math.floor(abs%1e3);
+
+  const parts=[];
+  if(cr>0)  parts.push(threeDigit(cr)+' करोड़');
+  if(lakh>0)parts.push(ones[lakh]||threeDigit(lakh))+' लाख';
+  if(lakh>0)parts[parts.length]=( ones[lakh]||threeDigit(lakh) )+' लाख';
+  if(hzr>0) parts.push(threeDigit(hzr)+' हज़ार');
+  if(rem>0) parts.push(threeDigit(rem));
+
+  // Fix: rebuild cleanly
+  const p2=[];
+  if(cr>0)   p2.push(threeDigit(cr)+' करोड़');
+  if(lakh>0) p2.push((ones[lakh]||threeDigit(lakh))+' लाख');
+  if(hzr>0)  p2.push(threeDigit(hzr)+' हज़ार');
+  if(rem>0)  p2.push(threeDigit(rem));
+
+  if(!p2.length) return sign+'₹ शून्य';
+  return sign+'₹ '+p2.join(', ');
+}
+
+// Wraps an INR amount string with a hover tooltip showing words
+// Returns HTML string: <span class="amt-tip" data-words="...">₹X,XX,XXX</span>
+// display=true: shows rounded compact (for KPI cards), exact in tooltip
+function wrapAmt(n, short=false, rounded=false){
+  if(!n||isNaN(n)||n===0) return fmtINR(n, short);
+  const words = amtToWords(n);
+  const safe = words.replace(/"/g,'&quot;');
+  // Rounded display for KPI cards
+  const display = rounded ? fmtINR_round(n) : fmtINR(n, short);
+  // Tooltip always shows exact number + words
+  const exact = fmtINR(n);
+  const tipText = exact + '  ·  ' + words;
+  const safeTip = tipText.replace(/"/g,'&quot;');
+  return `<span class="amt-tip" data-words="${safeTip}">${display}</span>`;
+}
+
+// Rounded compact format for KPI display: ₹80 Cr 78 L, ₹5 Cr 99 L, ₹43 L 10 K etc.
+function fmtINR_round(n) {
+  if(n===undefined||n===null||isNaN(n)) return '₹0';
+  const abs = Math.abs(n), sign = n < 0 ? '-' : '';
+  if(abs === 0) return '₹0';
+
+  if(abs >= 1e7) {
+    const cr   = Math.floor(abs / 1e7);
+    const lakh = Math.floor((abs % 1e7) / 1e5);
+    return sign + '₹' + cr + ' Cr' + (lakh > 0 ? ' ' + lakh + ' L' : '');
+  }
+  if(abs >= 1e5) {
+    const lakh = Math.floor(abs / 1e5);
+    const hzr  = Math.floor((abs % 1e5) / 1e3);
+    return sign + '₹' + lakh + ' L' + (hzr > 0 ? ' ' + hzr + ' K' : '');
+  }
+  if(abs >= 1000) return sign + '₹' + (abs/1000).toFixed(1) + ' K';
+  return sign + '₹' + Math.round(abs);
+}
+
+// fmtQ: quantity — exact with Indian commas, no rounding
+function fmtQ(n) {
+  if(n===undefined||n===null||isNaN(n)) return '0';
+  const abs = Math.abs(n), sign = n<0 ? '-' : '';
+  const intAbs = Math.floor(abs);
+  const dec = abs - intAbs;
+  const decStr = dec > 0.004 ? '.' + dec.toFixed(3).slice(2).replace(/0+$/, '') : '';
+  return sign + inrComma(intAbs) + decStr;
+}
+
+function fmtPct(n){return isNaN(n)?'0%':n.toFixed(2)+'%'}
+function fmtN(n){
+  if(n===undefined||n===null||isNaN(n)) return '0';
+  const abs=Math.abs(n), sign=n<0?'-':'';
+  return sign+inrComma(Math.round(abs));
+}
+
+// ═══════════════ DATA STATE
+let RAW=[], CHARTS={}, invPage=1, invStatusF='all', invSortK='cl_amt_d', alertTabK='neg', abcTabK='A', abcData={A:[],B:[],C:[]};
+const PER_PAGE=60;
+const GC='rgba(255,255,255,.04)', TC='#4a5568';
+const COLS=['#00d4ff','#00ff9d','#ff6b35','#a855f7','#fbbf24','#ff3b5c','#06b6d4','#10b981','#f43f5e','#8b5cf6','#14b8a6','#ef4444','#3b82f6','#ec4899','#84cc16','#f97316','#22d3ee','#4ade80'];
+
+// ═══════════════ COLUMN FINDER
+function fc(r,list){for(const k of list){if(r[k]!==undefined)return r[k];const kl=k.toLowerCase().trim();for(const rk of Object.keys(r)){if(rk.toLowerCase().trim()===kl)return r[rk]}}return undefined}
+function pF(v){return parseFloat((v||'0').toString().replace(/,/g,'').replace(/[^\d.-]/g,''))||0}
+
+// ═══════════════ UPLOAD LOGIC
+function initUpload(){
+  const dz=document.getElementById('dropZone');
+  const cf=document.getElementById('csvFile');
+  if(!dz||!cf)return;
+  dz.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();dz.classList.add('drag')});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+  dz.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f)});
+  cf.addEventListener('change',e=>{const f=e.target.files[0];if(f)handleFile(f)});
+}
+document.addEventListener('DOMContentLoaded',initUpload);
+
+function showErr(msg){const el=document.getElementById('parseErr');if(el){el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',9000)}}
+function setDropTitle(t){const el=document.getElementById('dropTitle');if(el)el.textContent=t;}
+
+// ── Smart file router ──
+function handleFile(file){
+  document.getElementById('loadBtn').style.display='none';
+  const name=file.name.toLowerCase();
+  if(name.endsWith('.xlsx')||name.endsWith('.xls')){
+    setDropTitle('⏳ Excel file पढ़ रहे हैं...');
+    parseXLSX(file);
+  } else {
+    setDropTitle('⏳ CSV file पढ़ रहे हैं...');
+    parseCSV(file);
+  }
+}
+
+// ── XLSX parser — auto-cleans Tally/Busy/Marg exports ──
+function parseXLSX(file){
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      // Convert to array of arrays, include empty cells as empty string
+      const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true,blankrows:false});
+      if(!raw||raw.length<2){showErr('Excel file empty लग रही है।');setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ');return}
+      processRawRows(raw);
+    }catch(err){
+      showErr('Excel file पढ़ने में error: '+err.message);
+      setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ');
+    }
+  };
+  reader.onerror=()=>{showErr('File पढ़ने में problem हुई।');setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ')};
+  reader.readAsArrayBuffer(file);
+}
+
+// ── CSV parser ──
+function parseCSV(file){
+  Papa.parse(file,{
+    header:false, skipEmptyLines:true, dynamicTyping:false,
+    complete:res=>{
+      if(!res.data||res.data.length<2){showErr('CSV file empty है।');setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ');return}
+      processRawRows(res.data);
+    },
+    error:err=>{showErr('File पढ़ने में error: '+err.message);setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ')}
+  });
+}
+
+// ── Smart row processor — finds headers automatically ──
+// Handles Tally/Busy/Marg style: company name rows, merged header rows, blank rows, total rows
+function processRawRows(allRows){
+  // Step 1: Find the actual header row — look for row with max non-empty cells AND contains stock keywords
+  const keywords=['item','qty','amt','price','unit','particulars','closing','opening'];
+  let headerRowIdx=-1, bestScore=0;
+  for(let i=0;i<Math.min(15,allRows.length);i++){
+    const row=allRows[i];
+    const joined=row.map(c=>(c||'').toString().toLowerCase()).join(' ');
+    let score=0;
+    keywords.forEach(k=>{if(joined.includes(k))score++});
+    const nonEmpty=row.filter(c=>c!==''&&c!==null&&c!==undefined).length;
+    // weighted: keyword matches matter more, also prefer rows with many columns
+    const total=score*3 + nonEmpty;
+    if(score>=2&&total>bestScore){bestScore=total;headerRowIdx=i}
+  }
+  if(headerRowIdx<0){
+    // fallback: just take first row with most non-empty cells
+    let max=0;
+    allRows.slice(0,10).forEach((r,i)=>{const n=r.filter(c=>c!==''&&c!==null).length;if(n>max){max=n;headerRowIdx=i}});
+  }
+  if(headerRowIdx<0){showErr('Header row नहीं मिली।');setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ');return}
+
+  const rawHeaders=allRows[headerRowIdx].map(c=>(c||'').toString().trim());
+  // Data rows = everything after header, skip rows where first meaningful cell is empty or a "total" label
+  const dataRows=allRows.slice(headerRowIdx+1).filter(row=>{
+    const first=(row[0]||'').toString().trim().toLowerCase();
+    if(first==='')return false;
+    if(/^(total|grand total|sub.?total|subtotal|net total)$/i.test(first))return false;
+    // skip rows that look like sub-headers (most cells are empty)
+    const nonEmpty=row.filter(c=>c!==''&&c!==null&&c!==undefined).length;
+    if(nonEmpty<2)return false;
+    return true;
+  });
+      if(!rawHeaders||rawHeaders.length===0){showErr('Could not find header row.');setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ');return}
+      function norm(s){return(s||'').toString().toLowerCase().replace(/[\s._\-]/g,'')}
+      function findColNth(hdrs,names,nth){
+        nth=nth||0;
+        const ns=names.map(n=>norm(n));
+        let cnt=0;
+        for(let i=0;i<hdrs.length;i++){
+          const h=norm(hdrs[i]);
+          if(ns.includes(h)){if(cnt===nth)return i;cnt++}
+        }
+        return -1;
+      }
+      function findCol(hdrs,names){return findColNth(hdrs,names,0)}
+      const H=rawHeaders;
+      const iItem  =findCol(H,['Item Details','item','Item Name','Particulars','Name','Product','Description','particulars']);
+      const iUnit  =findCol(H,['Unit','unit','UOM','uom']);
+      const iOpQty =findCol(H,['Op. Qty','Op Qty','OpQty','Opening Qty','openingqty']);
+      const iOpAmt =findCol(H,['Op. Amt.','Op Amt','OpAmt','Opening Amt','Opening Amount','Op Amount']);
+      const iOpPrc =findColNth(H,['Price','Rate','price','rate'],0);
+      const iQtyIn =findCol(H,['Qty. In','Qty In','QtyIn','Inward Qty','Receipt Qty','Purchase Qty']);
+      const iAvgIn =findColNth(H,['Avg. Price','Avg Price','AvgPrice','Average Price'],0);
+      const iAmtIn =findCol(H,['Amt. In','Amt In','AmtIn','Inward Amt','Receipt Amt','Purchase Amt','Amount In']);
+      const iQtyOut=findCol(H,['Qty. Out','Qty Out','QtyOut','Outward Qty','Issue Qty','Sales Qty','Dispatch Qty']);
+      const iAvgOut=findColNth(H,['Avg. Price','Avg Price','AvgPrice','Average Price'],1);
+      const iAmtOut=findCol(H,['Amt. Out','Amt Out','AmtOut','Outward Amt','Issue Amt','Sales Amt','Dispatch Amt','Amount Out']);
+      const iClQty =findCol(H,['Cl. Qty','Cl Qty','ClQty','Closing Qty','Close Qty']);
+      const iClPrc =findColNth(H,['Price','Rate','price','rate'],1);
+      const iClAmt =findCol(H,['Cl. Amt.','Cl Amt','ClAmt','Closing Amt','Closing Amount','Close Amt']);
+      function g(row,idx){return idx>=0&&idx<row.length?(row[idx]||''):''}
+      RAW=dataRows.map(row=>{
+        const item=g(row,iItem).toString().trim();
+        if(!item||item.toLowerCase()==='total'||item.toLowerCase()==='grand total')return null;
+        return{item,
+          unit:g(row,iUnit).toString().trim(),
+          op_qty:pF(g(row,iOpQty)),op_amt:pF(g(row,iOpAmt)),op_price:pF(g(row,iOpPrc)),
+          qty_in:pF(g(row,iQtyIn)),avg_price_in:pF(g(row,iAvgIn)),amt_in:pF(g(row,iAmtIn)),
+          qty_out:pF(g(row,iQtyOut)),avg_price_out:pF(g(row,iAvgOut)),amt_out:pF(g(row,iAmtOut)),
+          cl_qty:pF(g(row,iClQty)),cl_price:pF(g(row,iClPrc)),cl_amt:pF(g(row,iClAmt))};
+      }).filter(r=>r&&r.item.length>0);
+      if(!RAW.length){showErr('Data match नहीं हुआ। Headers found: '+rawHeaders.filter(h=>h).slice(0,12).join(' | '));setDropTitle('❌ Column mismatch — फिर से try करें');return}
+      RAW.forEach(r=>{r.dispatch=r.qty_in>0?(r.qty_out/r.qty_in*100):0});
+      setDropTitle('✅ '+RAW.length+' items मिले — Dashboard load हो रहा है!');
+      document.getElementById('loadBtn').style.display='block';
+      setTimeout(()=>doLoad(),350);
+}
+function doLoad(){
+  if(!RAW.length)return;
+  const ov=document.getElementById('loadingOverlay');
+  ov.style.display='flex';
+  setTimeout(()=>{
+    buildAll();
+    document.getElementById('uploadScreen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    ov.style.display='none';
+  },80);
+}
+
+function resetApp(){
+  document.getElementById('uploadScreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('loadBtn').style.display='none';
+  document.getElementById('csvFile').value='';
+  setDropTitle('Drop your Excel (.xlsx) या CSV file यहाँ');
+  RAW=[];Object.values(CHARTS).forEach(c=>c&&c.destroy&&c.destroy());CHARTS={};
+  invPage=1;invStatusF='all';invSortK='cl_amt_d';alertTabK='neg';abcTabK='A';abcData={A:[],B:[],C:[]};
+}
+
+// ═══════════════ STATUS
+function getStatus(r){
+  if(r.cl_qty<0)return'neg';
+  if(r.qty_in===0&&r.qty_out===0)return'dead';
+  if(r.qty_out===0&&r.qty_in>0)return'slow';
+  if(r.qty_out/(r.op_qty+r.qty_in||1)>1.5)return'fast';
+  return'active';
+}
+function statusTag(s){const m={neg:'<span class="tag tneg">⚠ NEGATIVE</span>',dead:'<span class="tag tdead">● DEAD</span>',slow:'<span class="tag tslow">◔ SLOW</span>',fast:'<span class="tag tfast">⚡ FAST</span>',active:'<span class="tag tact">✓ ACTIVE</span>'};return m[s]||''}
+
+// ═══════════════ CHART HELPER
+function mkChart(id,cfg){
+  if(CHARTS[id])CHARTS[id].destroy();
+  const el=document.getElementById(id);if(!el)return;
+  CHARTS[id]=new Chart(el.getContext('2d'),cfg);return CHARTS[id];
+}
+
+// ═══════════════ BUILD ALL
+function buildAll(){
+  const total=RAW.length;
+  const tQin=RAW.reduce((a,r)=>a+r.qty_in,0);
+  const tQout=RAW.reduce((a,r)=>a+r.qty_out,0);
+  const tAin=RAW.reduce((a,r)=>a+r.amt_in,0);
+  const tAout=RAW.reduce((a,r)=>a+r.amt_out,0);
+  const tOAmt=RAW.reduce((a,r)=>a+r.op_amt,0);
+  const tOQty=RAW.reduce((a,r)=>a+r.op_qty,0);
+  const tCAmt=RAW.reduce((a,r)=>a+r.cl_amt,0);
+  const tCQty=RAW.reduce((a,r)=>a+r.cl_qty,0);
+  const posCAmt=RAW.filter(r=>r.cl_amt>0).reduce((a,r)=>a+r.cl_amt,0);
+  const negItems=RAW.filter(r=>r.cl_qty<0);
+  const deadItems=RAW.filter(r=>r.qty_in===0&&r.qty_out===0);
+  const slowItems=RAW.filter(r=>r.qty_in>0&&r.qty_out===0);
+  const activeItems=RAW.filter(r=>r.qty_in>0&&r.qty_out>0);
+  const fastItems=RAW.filter(r=>getStatus(r)==='fast');
+  const dispRate=tQin>0?tQout/tQin*100:0;
+
+  document.getElementById('topMetaText').textContent=`${total} Items | बचा माल: ${fmtINR(posCAmt,true)} | ${negItems.length} Negative | ${deadItems.length} Dead`;
+  document.getElementById('footerTxt').textContent=`Anand Garments — ${total} Items | Closing Stock: ${fmtINR(posCAmt)} | ${new Date().toLocaleDateString('hi-IN')} | Stock Dashboard`;
+  document.getElementById('ovBadge').textContent=total+' Items';
+
+  buildKPIs(total,tQin,tQout,tAin,tAout,tOAmt,tOQty,posCAmt,tCQty,negItems,deadItems,activeItems,fastItems,dispRate);
+  buildTicker(posCAmt,negItems,activeItems,fastItems,tAin,tAout);
+  buildOverviewCharts(posCAmt,tAin,tAout);
+  buildQuickStats(total,activeItems,deadItems,slowItems,negItems,fastItems,tAin,tAout,posCAmt);
+  buildStory(total,tOAmt,tAin,tAout,posCAmt,tQin,tQout,negItems,deadItems,activeItems,fastItems,dispRate);
+  buildInventory();
+  buildAlerts(negItems,deadItems,slowItems);
+  buildAnalysis(tAin,tAout);
+  buildABC();
+  buildHealth(negItems,deadItems,activeItems,total,tQin,tQout,tAin,tAout,posCAmt);
+  buildDecisions(negItems,deadItems,activeItems,fastItems,slowItems,total,tAin,tAout,posCAmt,tQin,tQout,dispRate);
+}
+
+// ═══════════════ KPIs
+function buildKPIs(total,tQin,tQout,tAin,tAout,tOAmt,tOQty,posCAmt,tCQty,negItems,deadItems,activeItems,fastItems,dispRate){
+  const net=tAin-tAout;
+  const kpis=[
+    {l:'कुल Items (SKUs)',v:fmtN(total),s:`${activeItems.length} active · ${deadItems.length} dead`,ico:'📦',c:'kc1',ex:'आपके warehouse में कुल कितने अलग-अलग items हैं'},
+    {l:'Opening Stock Value',v:wrapAmt(tOAmt,false,true),s:`Opening Qty: ${fmtQ(tOQty)}`,ico:'🔓',c:'kc7',ex:'साल/period की शुरुआत में कितना माल था'},
+    {l:'कुल माल आया (Value)',v:wrapAmt(tAin,false,true),s:`Qty: ${fmtQ(tQin)}`,ico:'📥',c:'kc2',ex:'इस period में कितने रुपये का नया माल आया'},
+    {l:'कुल माल गया (Value)',v:wrapAmt(tAout,false,true),s:`Qty: ${fmtQ(tQout)}`,ico:'📤',c:'kc3',ex:'इस period में कितना माल बिका या भेजा गया'},
+    {l:'Closing Stock Value',v:wrapAmt(posCAmt,false,true),s:`Closing Qty: ${fmtQ(tCQty)}`,ico:'💰',c:'kc5',ex:'अभी warehouse में कुल कितने रुपये का माल बचा है'},
+    {l:'Net Value (आया − गया)',v:wrapAmt(net,false,true),s:net>=0?'माल ज़्यादा आया':'माल ज़्यादा गया',ico:'⚖️',c:net>=0?'kc2':'kc6',ex:'Total Inflow minus Total Outflow'},
+    {l:'Negative Stock Items',v:negItems.length,s:`Risk: ${wrapAmt(Math.abs(negItems.reduce((a,r)=>a+r.cl_amt,0)),false,true)}`,ico:'⚠️',c:'kc6',ex:'इन items का stock negative है — तुरंत physical count करें!'},
+    {l:'Dead Stock Items',v:deadItems.length,s:`Value: ${wrapAmt(deadItems.reduce((a,r)=>a+r.cl_amt,0),false,true)}`,ico:'⛔',c:'kc4',ex:'न आया न गया — ये items बेकार पड़े हैं, पैसा block है'},
+    {l:'Fast Moving Items',v:fastItems.length,s:'तेज़ बिकने वाले',ico:'⚡',c:'kc1',ex:'ये items सबसे तेज़ बिकते हैं — stock हमेशा रखें!'},
+    {l:'Dispatch Rate',v:fmtPct(dispRate),s:'Qty गया ÷ Qty आया',ico:'📊',c:'kc8',ex:'जितना माल आया उसमें से कितना % भेज दिया गया'},
+  ];
+  const g=document.getElementById('kpiGrid');g.innerHTML='';
+  kpis.forEach((k,i)=>{
+    g.innerHTML+=`<div class="kcard ${k.c}" style="animation-delay:${i*.05}s">
+      <div class="kicon">${k.ico}</div>
+      <div class="klabel">${k.l}</div>
+      <div class="kval">${k.v}</div>
+      <div class="ksub">${k.s}</div>
+      <div class="kexpl">${k.ex}</div>
+    </div>`;
+  });
+}
+
+// ═══════════════ TICKER
+function buildTicker(posCAmt,negItems,activeItems,fastItems,tAin,tAout){
+  const top6=[...RAW].sort((a,b)=>b.cl_amt-a.cl_amt).slice(0,6);
+  let h=top6.map(r=>`<div class="titem"><span class="tn">${r.item.length>22?r.item.slice(0,22)+'…':r.item}</span><span class="tv">${fmtINR(r.cl_amt,true)}</span><span style="color:var(--t3)">│</span></div>`).join('');
+  h+=`<div class="titem"><span class="tn">Closing Stock</span><span class="tv">${fmtINR(posCAmt,true)}</span><span style="color:var(--t3)">│</span></div>`;
+  h+=`<div class="titem"><span class="tn">Negative Items</span><span class="tneg">${negItems.length}</span><span style="color:var(--t3)">│</span></div>`;
+  h+=`<div class="titem"><span class="tn">Fast Movers</span><span class="tv">${fastItems.length} items</span><span style="color:var(--t3)">│</span></div>`;
+  h+=`<div class="titem"><span class="tn">Total Inflow</span><span class="tv">${fmtINR(tAin,true)}</span><span style="color:var(--t3)">│</span></div>`;
+  document.getElementById('ticker').innerHTML=h+h;
+}
+
+// ═══════════════ OVERVIEW CHARTS
+function buildOverviewCharts(posCAmt,tAin,tAout){
+  const byCA=[...RAW].sort((a,b)=>b.cl_amt-a.cl_amt);
+  const top15=byCA.slice(0,15);
+
+  mkChart('chBarTop',{type:'bar',data:{
+    labels:top15.map(d=>d.item.length>22?d.item.slice(0,22)+'…':d.item),
+    datasets:[{data:top15.map(d=>d.cl_amt),backgroundColor:top15.map((_,i)=>`hsla(${190+i*7},85%,58%,.75)`),borderRadius:6,borderSkipped:false}]
+  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`  ${fmtINR(c.raw)}`}}},
+    scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'},callback:v=>fmtINR(v,true)}},
+    y:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}}}}});
+
+  // Unit donut
+  const um={};RAW.forEach(r=>{const u=r.unit||'अन्य';um[u]=(um[u]||0)+Math.max(0,r.cl_amt)});
+  const ue=Object.entries(um).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  mkChart('chDonutUnit',{type:'doughnut',data:{labels:ue.map(e=>e[0]),datasets:[{data:ue.map(e=>e[1]),backgroundColor:COLS,borderWidth:0,hoverOffset:10}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`  ${fmtINR(c.raw)}`}}}}});
+  document.getElementById('unitLegend').innerHTML=ue.slice(0,6).map((e,i)=>
+    `<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+      <div style="width:10px;height:10px;border-radius:3px;background:${COLS[i]};flex-shrink:0"></div>
+      <span style="font-family:var(--hi);font-size:11px;color:var(--t2);flex:1">${e[0]}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--a)">${fmtINR(e[1],true)}</span>
+    </div>`).join('');
+
+  // Flow chart
+  const flowData=[...RAW].filter(r=>r.qty_in>0||r.qty_out>0).sort((a,b)=>(b.qty_in+b.qty_out)-(a.qty_in+a.qty_out)).slice(0,10);
+  mkChart('chFlow',{type:'bar',data:{
+    labels:flowData.map(d=>d.item.length>16?d.item.slice(0,16)+'…':d.item),
+    datasets:[{label:'आया Qty',data:flowData.map(d=>d.qty_in),backgroundColor:'rgba(0,255,157,.72)',borderRadius:4},
+              {label:'गया Qty',data:flowData.map(d=>d.qty_out),backgroundColor:'rgba(0,212,255,.72)',borderRadius:4}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:12}}},
+    scales:{x:{grid:{display:false},ticks:{color:TC,font:{size:10}}},
+    y:{grid:{color:GC},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'},callback:v=>fmtQ(v)}}}}});
+
+  // Status donut
+  const neg=RAW.filter(r=>r.cl_qty<0).length,dead=RAW.filter(r=>r.qty_in===0&&r.qty_out===0).length;
+  const slow=RAW.filter(r=>r.qty_in>0&&r.qty_out===0).length,act=RAW.filter(r=>r.qty_in>0&&r.qty_out>0).length;
+  const fast=RAW.filter(r=>getStatus(r)==='fast').length;
+  mkChart('chStatus',{type:'doughnut',data:{
+    labels:['✓ Active','⚡ Fast','◔ Slow','● Dead','⚠ Negative'],
+    datasets:[{data:[act-fast,fast,slow,dead,neg],backgroundColor:['#00ff9d','#00d4ff','#fbbf24','#4a5568','#ff3b5c'],borderWidth:0,hoverOffset:8}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`  ${c.label}: ${c.raw} items`}}}}});
+  document.getElementById('statusLeg').innerHTML=[['✓ Active',act,'#00ff9d'],['⚡ Fast',fast,'#00d4ff'],['◔ Slow',slow,'#fbbf24'],['● Dead',dead,'#4a5568'],['⚠ Neg',neg,'#ff3b5c']].map(([l,v,c])=>
+    `<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px"><div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></div><span style="font-family:var(--hi);font-size:11px;color:var(--t2);flex:1">${l}</span><span style="font-family:var(--mono);font-size:12px;font-weight:700;color:${c}">${v}</span></div>`).join('');
+
+  // Amt flow
+  const af=[...RAW].filter(r=>r.amt_in>0||r.amt_out>0).sort((a,b)=>(b.amt_in+b.amt_out)-(a.amt_in+a.amt_out)).slice(0,8);
+  mkChart('chAmtFlow',{type:'bar',data:{
+    labels:af.map(d=>d.item.length>16?d.item.slice(0,16)+'…':d.item),
+    datasets:[{label:'आया ₹',data:af.map(d=>d.amt_in),backgroundColor:'rgba(0,255,157,.68)',borderRadius:4},
+              {label:'गया ₹',data:af.map(d=>d.amt_out),backgroundColor:'rgba(255,107,53,.68)',borderRadius:4}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:12}}},
+    scales:{x:{grid:{display:false},ticks:{color:TC,font:{size:10}}},
+    y:{grid:{color:GC},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'},callback:v=>fmtINR(v,true)}}}}});
+
+  // Dispatch rate chart
+  const dispData=[...RAW].filter(r=>r.qty_in>0).sort((a,b)=>b.dispatch-a.dispatch).slice(0,12);
+  mkChart('chDispatch',{type:'bar',data:{
+    labels:dispData.map(d=>d.item.length>18?d.item.slice(0,18)+'…':d.item),
+    datasets:[{label:'Dispatch %',data:dispData.map(d=>Math.min(d.dispatch,200)),backgroundColor:dispData.map(d=>d.dispatch>100?'rgba(255,107,53,.8)':d.dispatch>50?'rgba(0,255,157,.8)':'rgba(251,191,36,.8)'),borderRadius:5}]
+  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`  ${c.raw.toFixed(1)}%`}}},
+    scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'},callback:v=>v+'%'},max:200},
+    y:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}}}}});
+}
+
+// ═══════════════ QUICK STATS
+function buildQuickStats(total,activeItems,deadItems,slowItems,negItems,fastItems,tAin,tAout,posCAmt){
+  const net=tAin-tAout;
+  document.getElementById('quickStats').innerHTML=[
+    ['कुल Items',fmtN(total),'var(--a)'],
+    ['Active (In+Out दोनों)',fmtN(activeItems.length),'var(--a2)'],
+    ['Fast Moving Items',fmtN(fastItems.length),'var(--a)'],
+    ['Slow (सिर्फ़ आया)',fmtN(slowItems.length),'var(--warn)'],
+    ['Dead Stock',fmtN(deadItems.length),'var(--t3)'],
+    ['Negative Stock',fmtN(negItems.length),'var(--red)'],
+    ['Total माल आया',wrapAmt(tAin,false,true),'var(--a2)'],
+    ['Total माल गया',wrapAmt(tAout,false,true),'var(--a3)'],
+    ['Net (आया − गया)',wrapAmt(net,false,true),net>=0?'var(--a2)':'var(--red)'],
+    ['Closing Stock Value',wrapAmt(posCAmt,false,true),'var(--a5)'],
+  ].map(([l,v,c])=>`<div class="srow"><span class="slabel">${l}</span><span class="sval" style="color:${c}">${v}</span></div>`).join('');
+}
+
+// ═══════════════ STORY
+function buildStory(total,tOAmt,tAin,tAout,posCAmt,tQin,tQout,negItems,deadItems,activeItems,fastItems,dispRate){
+  const net=tAin-tAout,activeP=(activeItems.length/total*100).toFixed(0);
+  document.getElementById('storyText').innerHTML=
+    `इस period में आपके warehouse में कुल <span class="hl">${fmtN(total)} अलग-अलग items</span> थे।
+    शुरुआत में आपके पास <span class="hl">${wrapAmt(tOAmt,false,true)}</span> का माल था।
+    <br>इस दौरान <span class="hl">${wrapAmt(tAin,false,true)}</span> का नया माल आया
+    और <span class="hl">${wrapAmt(tAout,false,true)}</span> का माल बेचा/भेजा गया।
+    अभी आपके warehouse में <span class="hl">${wrapAmt(posCAmt,false,true)}</span> का माल बचा है।
+    <br><br>${net>=0?`💰 <span class="hl">Net ${wrapAmt(net,false,true)} Positive</span> — जितना आया उससे कम भेजा, माल आपके पास है।`:`📤 <span class="bad">Net ${wrapAmt(Math.abs(net),false,true)} Negative</span> — जितना आया उससे ज़्यादा भेजा गया।`}
+    <br><br>कुल items में से <span class="hl">${activeItems.length} items (${activeP}%)</span> active हैं — यानी उनमें माल आया भी और गया भी।
+    <span class="wrn">${deadItems.length} items dead stock</span> हैं — न आया, न गया। पैसा block है!
+    ${negItems.length>0?`<span class="bad">${negItems.length} items का stock negative</span> है — यह गड़बड़ है, physical count करें।`:'<span class="hl">कोई item negative नहीं — बहुत बढ़िया! 🎉</span>'}
+    <br><br>Dispatch Rate <span class="hl">${dispRate.toFixed(1)}%</span> है।
+    ${fastItems.length>0?`<span class="hl">${fastItems.length} Fast Moving items</span> हैं जो बहुत तेज़ बिकते हैं — इनका stock हमेशा रखें!`:''}`;
+
+  document.getElementById('storyKpis').innerHTML=[
+    {ico:'💼',t:'Opening Value',v:wrapAmt(tOAmt,false,true),c:'#06b6d4',h:'शुरुआती माल'},
+    {ico:'📥',t:'Total आया',v:wrapAmt(tAin,false,true),c:'#00ff9d',h:'नया माल'},
+    {ico:'📤',t:'Total गया',v:wrapAmt(tAout,false,true),c:'#ff6b35',h:'बेचा/भेजा'},
+    {ico:'🏦',t:'Closing Value',v:wrapAmt(posCAmt,false,true),c:'#fbbf24',h:'अभी बचा'},
+    {ico:'📊',t:'Dispatch Rate',v:dispRate.toFixed(1)+'%',c:'#a855f7',h:'भेजा ÷ आया'},
+    {ico:'⚡',t:'Fast Movers',v:fastItems.length+' items',c:'#00d4ff',h:'तेज़ बिकने वाले'},
+  ].map(k=>`<div class="panel d1" style="text-align:center;border-color:${k.c}22">
+    <div style="font-size:26px;margin-bottom:8px">${k.ico}</div>
+    <div style="font-family:var(--hi);font-size:11px;color:var(--t3);margin-bottom:7px">${k.t}</div>
+    <div style="font-family:var(--dis);font-size:24px;color:${k.c};line-height:1">${k.v}</div>
+    <div style="font-family:var(--hi);font-size:10px;color:var(--t3);margin-top:6px">${k.h}</div>
+  </div>`).join('');
+
+  mkChart('chWaterfall',{type:'bar',data:{
+    labels:['Opening\nStock','माल\nआया','माल\nगया','Closing\nStock'],
+    datasets:[{data:[tOAmt,tAin,tAout,posCAmt],backgroundColor:['rgba(6,182,212,.75)','rgba(0,255,157,.75)','rgba(255,107,53,.75)','rgba(251,191,36,.75)'],borderRadius:8,borderSkipped:false}]
+  },options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`  ${fmtINR(c.raw)}`}}},
+    scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:11}}},
+    y:{grid:{color:GC},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'},callback:v=>fmtINR(v,true)}}}}});
+
+  document.getElementById('healthSnap').innerHTML=[
+    ['✓ Active Items',activeItems.length,'#00ff9d'],
+    ['◔ Slow (सिर्फ आया)',RAW.filter(r=>r.qty_in>0&&r.qty_out===0).length,'#fbbf24'],
+    ['● Dead Items',deadItems.length,'#4a5568'],
+    ['⚠ Negative Items',negItems.length,'#ff3b5c'],
+    ['⚡ Fast Moving',fastItems.length,'#00d4ff'],
+    ['💎 High Value Idle (>₹5L)',RAW.filter(r=>r.cl_amt>5e5&&r.qty_out===0&&r.qty_in>0).length,'#a855f7'],
+  ].map(([l,v,c])=>{
+    const pct=RAW.length>0?(v/RAW.length*100):0;
+    return`<div class="prow"><span class="plabel">${l}</span><div class="pbar"><div class="pfill" style="width:${pct}%;background:${c}"></div></div><span class="pval" style="color:${c}">${v} (${pct.toFixed(1)}%)</span></div>`
+  }).join('');
+}
+
+// ═══════════════ INVENTORY
+let invFilter='all',invSortCol='cl_amt',invSortDir=-1;
+function setInvF(f,btn){invFilter=f;invPage=1;document.querySelectorAll('#page-inventory .fb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderInv()}
+function sortBy(col){if(invSortCol===col)invSortDir*=-1;else{invSortCol=col;invSortDir=-1}invPage=1;renderInv()}
+
+function buildInventory(){
+  const units=[...new Set(RAW.map(r=>r.unit).filter(Boolean))].sort();
+  const uf=document.getElementById('unitFilter');
+  uf.innerHTML='<option value="">सभी Units</option>'+units.map(u=>`<option value="${u}">${u}</option>`).join('');
+  renderInv();
+}
+
+function renderInv(){
+  const search=document.getElementById('invSearch').value.toLowerCase();
+  const unit=document.getElementById('unitFilter').value;
+  const valF=document.getElementById('valFilter').value;
+  const sortV=document.getElementById('invSort').value;
+
+  // Sort mapping
+  const sortMap={cl_amt_d:['cl_amt',-1],cl_amt_a:['cl_amt',1],qty_in_d:['qty_in',-1],qty_out_d:['qty_out',-1],cl_qty_d:['cl_qty',-1],dispatch_d:['dispatch',-1],item_a:['item',1],item_d:['item',-1]};
+  const [sk,sd]=sortMap[sortV]||['cl_amt',-1];
+
+  let data=[...RAW].filter(r=>{
+    if(invFilter!=='all'&&getStatus(r)!==invFilter)return false;
+    if(search&&!r.item.toLowerCase().includes(search))return false;
+    if(unit&&r.unit!==unit)return false;
+    if(valF==='gt10l'&&r.cl_amt<=1e7)return false;
+    if(valF==='gt1l'&&r.cl_amt<=1e5)return false;
+    if(valF==='gt10k'&&r.cl_amt<=1e4)return false;
+    if(valF==='lt10k'&&r.cl_amt>=1e4)return false;
+    if(valF==='zero'&&r.cl_amt!==0)return false;
+    return true;
+  }).sort((a,b)=>{const av=typeof a[sk]==='string'?a[sk].toLowerCase():a[sk],bv=typeof b[sk]==='string'?b[sk].toLowerCase():b[sk];return av<bv?-sd:av>bv?sd:0});
+
+  const total=data.length;
+  const pages=Math.ceil(total/PER_PAGE)||1;
+  if(invPage>pages)invPage=1;
+  const slice=data.slice((invPage-1)*PER_PAGE,invPage*PER_PAGE);
+
+  document.getElementById('invCount').textContent=total+' items';
+
+  const maxCA=Math.max(...data.map(r=>Math.abs(r.cl_amt)),1);
+  document.getElementById('invBody').innerHTML=slice.map((r,i)=>{
+    const s=getStatus(r),rat=r.cl_amt/maxCA*100;
+    const avgRate=r.cl_qty!==0?Math.abs(r.cl_amt/r.cl_qty):0;
+    return`<tr>
+      <td><span class="iname">${(invPage-1)*PER_PAGE+i+1}. ${r.item}</span><span class="iunit">${r.unit||'—'}</span></td>
+      <td class="mono" style="color:var(--t2)">${r.unit||'—'}</td>
+      <td class="mono">${fmtQ(r.op_qty)}</td>
+      <td class="mono">${fmtINR(r.op_amt)}</td>
+      <td class="mono pos">${fmtQ(r.qty_in)}</td>
+      <td class="mono pos">${wrapAmt(r.amt_in,false,true)}</td>
+      <td class="mono" style="color:var(--a3)">${fmtQ(r.qty_out)}</td>
+      <td class="mono" style="color:var(--a3)">${wrapAmt(r.amt_out,false,true)}</td>
+      <td class="mono ${r.cl_qty<0?'neg':''}">${fmtQ(r.cl_qty)}</td>
+      <td><div class="numvis"><span class="numv-big" style="color:${r.cl_amt<0?'var(--red)':r.cl_amt>1e7?'var(--a5)':'var(--t)'}">${wrapAmt(r.cl_amt,false,true)}</span></div><div class="bmini"><div class="bfill" style="width:${rat}%;background:${r.cl_amt<0?'var(--red)':'var(--a)'}"></div></div></td>
+      <td class="mono ${r.dispatch>100?'neg':r.dispatch>50?'pos':'wc'}">${r.qty_in>0?r.dispatch.toFixed(1)+'%':'—'}</td>
+      <td class="mono" style="color:var(--t2)">${avgRate>0?fmtINR(avgRate):'—'}</td>
+      <td>${statusTag(s)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('invInfo').textContent=`${total} items में से ${(invPage-1)*PER_PAGE+1}–${Math.min(invPage*PER_PAGE,total)} दिख रहे हैं | Page ${invPage}/${pages}`;
+
+  const pg=document.getElementById('invPg');pg.innerHTML='';
+  if(pages>1){
+    const addBtn=(t,p,act)=>{const b=document.createElement('button');b.className='pgbtn'+(act?' active':'');b.textContent=t;b.onclick=()=>{invPage=p;renderInv()};pg.appendChild(b)};
+    if(invPage>1)addBtn('← पहले',invPage-1,false);
+    const s=Math.max(1,invPage-2),e=Math.min(pages,invPage+2);
+    for(let p=s;p<=e;p++)addBtn(p,p,p===invPage);
+    if(invPage<pages)addBtn('अगला →',invPage+1,false);
+  }
+}
+
+function exportCSV(){
+  const hdr='#,Item,Unit,Op.Qty,Op.Value,Qty.In,Value.In,Qty.Out,Value.Out,Cl.Qty,Cl.Value,Dispatch%,AvgRate,Status';
+  const rows=RAW.map((r,i)=>[i+1,`"${r.item}"`,r.unit,r.op_qty,r.op_amt,r.qty_in,r.amt_in,r.qty_out,r.amt_out,r.cl_qty,r.cl_amt,r.dispatch.toFixed(1),r.cl_qty!==0?(r.cl_amt/r.cl_qty).toFixed(2):0,getStatus(r)].join(','));
+  const blob=new Blob([hdr+'\n'+rows.join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='StockHQ_Export.csv';a.click();
+}
+
+// ═══════════════ ALERTS
+let alertTab2='neg';
+function setAlertTab(t,btn){alertTab2=t;document.querySelectorAll('#page-alerts .tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAlerts()}
+
+function buildAlerts(negItems,deadItems,slowItems){
+  document.getElementById('alertBadge').textContent=(negItems.length+deadItems.length)+' alerts';
+  renderAlerts();
+}
+
+function renderAlerts(){
+  let items=[],title='',color='var(--red)',icon='⚠️',cls='';
+  if(alertTab2==='neg'){
+    items=[...RAW].filter(r=>r.cl_qty<0).sort((a,b)=>a.cl_qty-b.cl_qty);
+    title='Negative Stock — इन items का stock negative है';color='var(--red)';icon='🔴';
+  }else if(alertTab2==='dead'){
+    items=[...RAW].filter(r=>r.qty_in===0&&r.qty_out===0).sort((a,b)=>b.cl_amt-a.cl_amt);
+    title='Dead Stock — न आया, न गया';color='var(--t3)';icon='⚫';cls='wcard';
+  }else if(alertTab2==='highval'){
+    items=[...RAW].filter(r=>r.cl_amt>5e5&&r.qty_out===0&&r.qty_in>0).sort((a,b)=>b.cl_amt-a.cl_amt);
+    title='High Value Idle — माल आया पर एक भी unit नहीं गया (>₹5 लाख)';color='var(--a4)';icon='💎';cls='wcard';
+  }else{
+    items=[...RAW].filter(r=>r.qty_in>0&&r.qty_out===0).sort((a,b)=>b.cl_amt-a.cl_amt);
+    title='Slow Moving — Inflow है पर Outflow शून्य है';color='var(--warn)';icon='⏳';cls='wcard';
+  }
+
+  let html=`<div class="exbox" style="border-color:${color}22;color:var(--t2)"><strong style="color:${color}">${icon} ${title}</strong> — <span style="font-family:var(--mono)">${items.length} items</span></div>`;
+  if(!items.length){html+='<div style="text-align:center;padding:40px;font-family:var(--hi);color:var(--t3)">✅ इस category में कोई item नहीं है — अच्छी बात है!</div>';document.getElementById('alertPanel').innerHTML=html;return}
+
+  html+=`<div class="agrid">`;
+  items.forEach(r=>{
+    const s=getStatus(r);
+    let val='',expl='';
+    if(alertTab2==='neg'){val=`<span style="color:var(--red)">${fmtQ(r.cl_qty)} (Closing Qty)</span>`;expl=`Risk Value: ${fmtINR(Math.abs(r.cl_amt))} | Physical count करें!`}
+    else if(alertTab2==='dead'){val=fmtINR(r.cl_amt);expl=`Opening: ${fmtINR(r.op_amt)} | पूरा माल idle है`}
+    else if(alertTab2==='highval'){val=fmtINR(r.cl_amt);expl=`आया: ${fmtQ(r.qty_in)} units | Sales push करें!`}
+    else{val=fmtINR(r.cl_amt);expl=`आया: ${fmtQ(r.qty_in)} units = ${fmtINR(r.amt_in)} | बिका: 0`}
+
+    html+=`<div class="acard ${cls}">
+      <div class="aico ${alertTab2==='neg'?'ared':alertTab2==='dead'?'':'ayel'}"><span>${icon}</span></div>
+      <div class="abody">
+        <div class="aname">${r.item}</div>
+        <div class="ameta">${r.unit||'—'} | ${statusTag(s)}</div>
+        <div class="aval" style="color:${color}">${val}</div>
+        <div class="aexpl">${expl}</div>
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  document.getElementById('alertPanel').innerHTML=html;
+}
+
+// ═══════════════ ANALYSIS
+function buildAnalysis(tAin,tAout){
+  // Top 10 Inflow
+  const top10in=[...RAW].sort((a,b)=>b.qty_in-a.qty_in).slice(0,10);
+  document.getElementById('top10in').innerHTML=top10in.map((r,i)=>`<div class="iitem">
+    <span class="irank">${i+1}</span>
+    <div class="ibody"><div class="iname">${r.item}</div><div class="isub">${r.unit||'—'} | ${statusTag(getStatus(r))}</div></div>
+    <div class="ival pos">${fmtQ(r.qty_in)}<div style="font-family:var(--hi);font-size:9px;color:var(--t3)">${fmtINR(r.amt_in,true)}</div></div>
+  </div>`).join('');
+
+  // Top 10 Outflow
+  const top10out=[...RAW].sort((a,b)=>b.qty_out-a.qty_out).slice(0,10);
+  document.getElementById('top10out').innerHTML=top10out.map((r,i)=>`<div class="iitem">
+    <span class="irank">${i+1}</span>
+    <div class="ibody"><div class="iname">${r.item}</div><div class="isub">${r.unit||'—'} | Dispatch: ${r.dispatch.toFixed(1)}%</div></div>
+    <div class="ival" style="color:var(--a3)">${fmtQ(r.qty_out)}<div style="font-family:var(--hi);font-size:9px;color:var(--t3)">${fmtINR(r.amt_out,true)}</div></div>
+  </div>`).join('');
+
+  // Top 10 Idle
+  const top10idle=[...RAW].filter(r=>r.qty_in>0&&r.qty_out===0).sort((a,b)=>b.cl_amt-a.cl_amt).slice(0,10);
+  document.getElementById('top10idle').innerHTML=top10idle.length?top10idle.map((r,i)=>`<div class="iitem">
+    <span class="irank">${i+1}</span>
+    <div class="ibody"><div class="iname">${r.item}</div><div class="isub">${r.unit||'—'} | आया: ${fmtQ(r.qty_in)}</div></div>
+    <div class="ival" style="color:var(--warn)">${fmtINR(r.cl_amt,true)}</div>
+  </div>`).join(''):'<div style="text-align:center;padding:20px;font-family:var(--hi);color:var(--t3)">कोई idle item नहीं है!</div>';
+
+  // Unit table
+  const um={};
+  RAW.forEach(r=>{const u=r.unit||'अन्य';if(!um[u])um[u]={cnt:0,qin:0,ain:0,qout:0,aout:0,cla:0,act:0};um[u].cnt++;um[u].qin+=r.qty_in;um[u].ain+=r.amt_in;um[u].qout+=r.qty_out;um[u].aout+=r.amt_out;um[u].cla+=r.cl_amt;if(getStatus(r)==='active'||getStatus(r)==='fast')um[u].act++});
+  document.getElementById('unitTable').innerHTML=Object.entries(um).sort((a,b)=>b[1].cla-a[1].cla).map(([u,v])=>`<tr>
+    <td><strong>${u}</strong></td>
+    <td class="mono acc">${v.cnt}</td>
+    <td class="mono pos">${fmtQ(v.qin)}</td>
+    <td class="mono pos">${fmtINR(v.ain)}</td>
+    <td class="mono" style="color:var(--a3)">${fmtQ(v.qout)}</td>
+    <td class="mono" style="color:var(--a3)">${fmtINR(v.aout)}</td>
+    <td class="mono" style="color:var(--a5)">${fmtINR(v.cla)}</td>
+    <td class="mono ${v.qin>0?'pos':'wc'}">${v.qin>0?(v.qout/v.qin*100).toFixed(1)+'%':'—'}</td>
+  </tr>`).join('');
+
+  // Value range distribution
+  const ranges=[['शून्य (₹0)',0,0],['₹1 – ₹1 हज़ार',1,1000],['₹1 हज़ार – ₹10 हज़ार',1000,10000],['₹10 हज़ार – ₹1 लाख',10000,100000],['₹1 लाख – ₹10 लाख',100000,1000000],['₹10 लाख – ₹1 करोड़',1000000,10000000],['₹1 करोड़ से ज़्यादा',10000000,Infinity]];
+  const rcnt=ranges.map(([l,lo,hi])=>({l,cnt:RAW.filter(r=>r.cl_amt>=lo&&r.cl_amt<hi).length}));
+  mkChart('chRangeDist',{type:'bar',data:{labels:rcnt.map(r=>r.l),datasets:[{data:rcnt.map(r=>r.cnt),backgroundColor:COLS.slice(0,7),borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`  ${c.raw} items`}}},
+    scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'}}},y:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}}}}});
+
+  // Scatter: cl_qty vs cl_amt
+  const scData=RAW.filter(r=>r.cl_qty>0&&r.cl_amt>0).slice(0,200).map(r=>({x:r.cl_qty,y:r.cl_amt,label:r.item}));
+  mkChart('chScatter',{type:'scatter',data:{datasets:[{data:scData,backgroundColor:'rgba(0,212,255,.5)',pointRadius:4,pointHoverRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.label}: Qty=${fmtQ(c.raw.x)}, Value=${fmtINR(c.raw.y)}`}}},
+    scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:9}},title:{display:true,text:'Closing Qty',color:TC,font:{size:10}}},
+    y:{grid:{color:GC},ticks:{color:TC,font:{size:9,family:'JetBrains Mono'},callback:v=>fmtINR(v,true)},title:{display:true,text:'Closing Value',color:TC,font:{size:10}}}}}});
+
+  // Dispatch distribution
+  const dBuckets=[0,0,0,0,0,0];const dLabels=['0%','1–25%','26–50%','51–100%','101–200%','>200%'];
+  RAW.filter(r=>r.qty_in>0).forEach(r=>{const d=r.dispatch;if(d===0)dBuckets[0]++;else if(d<=25)dBuckets[1]++;else if(d<=50)dBuckets[2]++;else if(d<=100)dBuckets[3]++;else if(d<=200)dBuckets[4]++;else dBuckets[5]++});
+  mkChart('chDispDist',{type:'bar',data:{labels:dLabels,datasets:[{data:dBuckets,backgroundColor:['#ff3b5c','#f59e0b','#fbbf24','#00ff9d','#00d4ff','#ff6b35'],borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`  ${c.raw} items`}}},
+    scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'}}}}}});
+}
+
+// ═══════════════ ABC ANALYSIS
+function buildABC(){
+  const sorted=[...RAW].filter(r=>r.cl_amt>0).sort((a,b)=>b.cl_amt-a.cl_amt);
+  const totalVal=sorted.reduce((a,r)=>a+r.cl_amt,0);
+  let cumVal=0;abcData={A:[],B:[],C:[]};
+  sorted.forEach(r=>{cumVal+=r.cl_amt;const pct=cumVal/totalVal*100;if(pct<=80)abcData.A.push(r);else if(pct<=95)abcData.B.push(r);else abcData.C.push(r)});
+
+  const aVal=abcData.A.reduce((a,r)=>a+r.cl_amt,0),bVal=abcData.B.reduce((a,r)=>a+r.cl_amt,0),cVal=abcData.C.reduce((a,r)=>a+r.cl_amt,0);
+
+  mkChart('chAbcDnt',{type:'doughnut',data:{labels:['🟢 A (VIP)','🟡 B','⚪ C'],datasets:[{data:[abcData.A.length,abcData.B.length,abcData.C.length],backgroundColor:['#00ff9d','#fbbf24','#4a5568'],borderWidth:0,hoverOffset:10}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{labels:{color:'#94a3b8',font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:c=>`  ${c.label}: ${c.raw} items`}}}}});
+
+  mkChart('chAbcBar',{type:'bar',data:{labels:['A Category (VIP)','B Category','C Category'],datasets:[
+    {label:'Items संख्या',data:[abcData.A.length,abcData.B.length,abcData.C.length],backgroundColor:['rgba(0,255,157,.7)','rgba(251,191,36,.7)','rgba(74,85,104,.7)'],borderRadius:6,yAxisID:'y'},
+    {label:'Closing Value',data:[aVal,bVal,cVal],backgroundColor:['rgba(0,255,157,.25)','rgba(251,191,36,.25)','rgba(74,85,104,.25)'],borderRadius:6,yAxisID:'y1'},
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#94a3b8',font:{size:10},boxWidth:10}}},
+    scales:{y:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y1:{position:'right',grid:{display:false},ticks:{color:TC,font:{size:10,family:'JetBrains Mono'},callback:v=>fmtINR(v,true)}}}}});
+
+  document.getElementById('abcSummary').innerHTML=[
+    {cat:'A',label:'VIP Items',cnt:abcData.A.length,val:aVal,col:'#00ff9d',desc:'80% value → Maximum attention, premium stock!'},
+    {cat:'B',label:'Important',cnt:abcData.B.length,val:bVal,col:'#fbbf24',desc:'15% value → नज़र रखें, regular review करें।'},
+    {cat:'C',label:'Regular',cnt:abcData.C.length,val:cVal,col:'#4a5568',desc:'5% value → कम priority, bulk में manage करें।'},
+  ].map(x=>`<div class="panel d1" style="border-top:3px solid ${x.col}">
+    <div style="font-family:var(--dis);font-size:28px;color:${x.col};margin-bottom:4px">CAT ${x.cat}</div>
+    <div style="font-family:var(--hi);font-size:13px;font-weight:700;color:var(--t)">${x.label}</div>
+    <div style="font-family:var(--dis);font-size:24px;color:var(--t);margin:10px 0">${x.cnt} <span style="font-size:14px;color:var(--t3)">Items</span></div>
+    <div style="font-family:var(--mono);font-size:13px;color:${x.col};margin-bottom:8px">${fmtINR(x.val)}</div>
+    <div style="font-family:var(--hi);font-size:11px;color:var(--t3);line-height:1.6">${x.desc}</div>
+  </div>`).join('');
+
+  renderAbcList();
+}
+
+function setAbcTab(t,btn){abcTabK=t;document.querySelectorAll('#page-abc .tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAbcList()}
+function renderAbcList(){
+  const d=abcData[abcTabK]||[];
+  document.getElementById('abcCount').textContent=d.length+' items';
+  document.getElementById('abcList').innerHTML=d.slice(0,50).map((r,i)=>`<div class="iitem">
+    <span class="irank" style="color:${abcTabK==='A'?'var(--a2)':abcTabK==='B'?'var(--a5)':'var(--t3)'}">${i+1}</span>
+    <div class="ibody"><div class="iname">${r.item}</div><div class="isub">${r.unit||'—'} | Closing Qty: ${fmtQ(r.cl_qty)}</div></div>
+    <div class="ival" style="color:${abcTabK==='A'?'var(--a2)':abcTabK==='B'?'var(--a5)':'var(--t2)'}">${fmtINR(r.cl_amt)}</div>
+  </div>`).join('')+(d.length>50?`<div style="text-align:center;padding:12px;font-family:var(--hi);color:var(--t3)">... और ${d.length-50} items हैं। Export CSV से देखें।</div>`:'');
+}
+
+// ═══════════════ HEALTH
+function buildHealth(negItems,deadItems,activeItems,total,tQin,tQout,tAin,tAout,posCAmt){
+  const negP=negItems.length/total*100,deadP=deadItems.length/total*100,actP=activeItems.length/total*100,dispR=tQin>0?tQout/tQin:0;
+  let score=100;
+  score-=Math.min(30,negP*3);score-=Math.min(20,deadP*.4);score+=Math.min(20,(actP-50)*.4);score-=dispR<.3?20:dispR<.5?10:0;score=Math.max(0,Math.min(100,Math.round(score)));
+
+  const el=document.getElementById('healthScore');el.textContent=score;el.style.color=score>=80?'var(--a2)':score>=60?'var(--a5)':'var(--red)';
+  const gr=document.getElementById('healthGrade');gr.textContent=score>=80?'शानदार 🎉':score>=60?'ठीक-ठाक 👍':score>=40?'सुधार चाहिए ⚠️':'तुरंत action लें! 🚨';
+  gr.style.background=score>=80?'rgba(0,255,157,.12)':score>=60?'rgba(251,191,36,.12)':'rgba(255,59,92,.12)';
+  gr.style.color=score>=80?'var(--a2)':score>=60?'var(--a5)':'var(--red)';
+
+  document.getElementById('healthDet').innerHTML=[
+    [`Negative Items ${negP.toFixed(1)}%`,negP<=5,'var(--red)'],
+    [`Dead Stock ${deadP.toFixed(1)}%`,deadP<=20,'var(--warn)'],
+    [`Active Items ${actP.toFixed(1)}%`,actP>=50,'var(--a2)'],
+    [`Dispatch Rate ${(dispR*100).toFixed(1)}%`,dispR>=.5,'var(--a)'],
+  ].map(([l,ok,c])=>{const col=ok?'#00ff9d':'#ff3b5c';const ico=ok?'✅':'❌';return`<div class="srow"><span class="slabel" style="font-size:11px">${l}</span><span style="color:${col}">${ico}</span></div>`}).join('');
+
+  mkChart('chRadar',{type:'radar',data:{labels:['Active Items %','Dispatch Rate','Value Efficiency','No Negative','Low Dead Stock','Fast Movers'],
+    datasets:[{data:[actP,dispR*100,Math.min(100,posCAmt/Math.max(tAin,1)*100),Math.max(0,100-negP*5),Math.max(0,100-deadP),RAW.filter(r=>getStatus(r)==='fast').length/total*100*10],backgroundColor:'rgba(0,212,255,.1)',borderColor:'var(--a)',pointBackgroundColor:'var(--a)',pointRadius:5,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{r:{grid:{color:'rgba(255,255,255,.08)'},angleLines:{color:'rgba(255,255,255,.05)'},pointLabels:{color:'#94a3b8',font:{size:10}},ticks:{display:false}}},plugins:{legend:{display:false}}}});
+
+  const statuses=[['✓ Active',activeItems.length,'#00ff9d'],['◔ Slow',RAW.filter(r=>r.qty_in>0&&r.qty_out===0).length,'#fbbf24'],['● Dead',deadItems.length,'#4a5568'],['⚠ Negative',negItems.length,'#ff3b5c']];
+  document.getElementById('healthBars').innerHTML=statuses.map(([l,v,c])=>{
+    const p=total>0?(v/total*100):0;
+    return`<div class="prow"><span class="plabel">${l}</span><div class="pbar"><div class="pfill" style="width:${p}%;background:${c}"></div></div><span class="pval" style="color:${c}">${v} (${p.toFixed(1)}%)</span></div>`;
+  }).join('');
+
+  const riskVal=Math.abs(negItems.reduce((a,r)=>a+r.cl_amt,0));
+  document.getElementById('riskPanel').innerHTML=negItems.length?[
+    ['Negative Items',negItems.length,'var(--red)'],
+    ['Risk Value',fmtINR(riskVal),'var(--red)'],
+    ['Top Negative',negItems.sort((a,b)=>a.cl_qty-b.cl_qty)[0]?.item||'—','var(--t2)'],
+  ].map(([l,v,c])=>`<div class="srow"><span class="slabel">${l}</span><span class="sval" style="color:${c}">${v}</span></div>`).join(''):
+  '<div style="text-align:center;padding:20px;font-family:var(--hi);color:var(--a2)">✅ कोई negative stock नहीं!</div>';
+
+  document.getElementById('effPanel').innerHTML=[
+    ['Value Efficiency',(posCAmt/Math.max(tAin,1)*100).toFixed(1)+'%','var(--a)'],
+    ['Avg Dispatch Rate',(dispR*100).toFixed(1)+'%',dispR>.5?'var(--a2)':'var(--warn)'],
+    ['Active %',actP.toFixed(1)+'%',actP>50?'var(--a2)':'var(--warn)'],
+    ['Avg Closing Value/Item',fmtINR(posCAmt/total),'var(--a5)'],
+    ['High Value Items (>₹1L)',RAW.filter(r=>r.cl_amt>1e5).length,'var(--a4)'],
+  ].map(([l,v,c])=>`<div class="srow"><span class="slabel">${l}</span><span class="sval" style="color:${c}">${v}</span></div>`).join('');
+
+  const recs=[];
+  if(negItems.length>0)recs.push({ico:'🔴',t:'Negative Stock Audit करें',d:`${negItems.length} items negative हैं। Risk: ${wrapAmt(riskVal,false,true)}। आज warehouse जाएं, physical count करें।`,c:'var(--red)',u:true});
+  if(deadItems.length>0)recs.push({ico:'⚫',t:'Dead Stock से पैसा निकालें',d:`${deadItems.length} dead items में ${wrapAmt(deadItems.reduce((a,r)=>a+r.cl_amt,0),false,true)} पड़ा है। Sale, return, या scrap करें।`,c:'var(--t3)',u:false});
+  if(score>=80)recs.push({ico:'✅',t:'Stock Management शानदार है!',d:'आपका stock बहुत अच्छे से manage हो रहा है। ऐसे ही चलते रहें!',c:'var(--a2)',u:false});
+  recs.push({ico:'⚡',t:'Fast Movers पर ध्यान दें',d:`${RAW.filter(r=>getStatus(r)==='fast').length} items तेज़ बिकते हैं। इनका stock कभी खत्म न होने दें।`,c:'var(--a)',u:false});
+  if(dispR<.5)recs.push({ico:'📦',t:'Dispatch Rate बढ़ाएं',d:`Dispatch Rate सिर्फ ${(dispR*100).toFixed(0)}% है। Sales push करें, pricing review करें।`,c:'var(--warn)',u:false});
+  document.getElementById('recs').innerHTML=recs.map(r=>`<div style="background:var(--sf2);border:1px solid var(--bd2);border-left:3px solid ${r.c};border-radius:var(--r2);padding:15px">
+    <div style="font-size:20px;margin-bottom:6px">${r.ico}${r.u?' <span style="font-family:var(--mono);font-size:9px;background:rgba(255,59,92,.2);color:var(--red);padding:2px 8px;border-radius:100px;vertical-align:middle">URGENT</span>':''}</div>
+    <div style="font-family:var(--hi);font-weight:800;font-size:13px;color:${r.c};margin-bottom:6px">${r.t}</div>
+    <div style="font-family:var(--hi);font-size:11px;color:var(--t2);line-height:1.7">${r.d}</div>
+  </div>`).join('');
+}
+
+// ═══════════════ DECISIONS
+function buildDecisions(negItems,deadItems,activeItems,fastItems,slowItems,total,tAin,tAout,posCAmt,tQin,tQout,dispRate){
+  const deadVal=deadItems.reduce((a,r)=>a+r.cl_amt,0);
+  const riskVal=Math.abs(negItems.reduce((a,r)=>a+r.cl_amt,0));
+  const idleHV=RAW.filter(r=>r.cl_amt>1e6&&r.qty_out===0&&r.qty_in>0);
+  const net=tAin-tAout;
+
+  // Summary boxes
+  document.getElementById('decSummary').innerHTML=[
+    {ico:'🔴',l:'Negative Items',v:negItems.length,sub:`Risk: ${fmtINR(riskVal,true)}`,c:'rgba(255,59,92,.15)',bc:'var(--red)'},
+    {ico:'⚫',l:'Dead Stock Items',v:deadItems.length,sub:`${fmtINR(deadVal,true)} block`,c:'rgba(74,85,104,.15)',bc:'#94a3b8'},
+    {ico:'💎',l:'High Value Idle',v:idleHV.length,sub:`${fmtINR(idleHV.reduce((a,r)=>a+r.cl_amt,0),true)}`,c:'rgba(168,85,247,.15)',bc:'var(--a4)'},
+    {ico:'⚡',l:'Fast Movers',v:fastItems.length,sub:'तेज़ बिकने वाले',c:'rgba(0,212,255,.15)',bc:'var(--a)'},
+  ].map(x=>`<div style="background:${x.c};border:1px solid ${x.bc}44;border-radius:var(--r2);padding:18px;text-align:center">
+    <div style="font-size:28px;margin-bottom:6px">${x.ico}</div>
+    <div style="font-family:var(--dis);font-size:32px;color:${x.bc};line-height:1">${x.v}</div>
+    <div style="font-family:var(--hi);font-size:12px;color:var(--t2);margin-top:4px">${x.l}</div>
+    <div style="font-family:var(--mono);font-size:11px;color:${x.bc};margin-top:3px">${x.sub}</div>
+  </div>`).join('');
+
+  const cards=[];
+  if(negItems.length>0)cards.push({ico:'🔴',c:'var(--red)',t:'URGENT: Negative Stock ठीक करें आज!',body:`आपके <strong>${negItems.length} items</strong> का closing quantity negative है।\n\n<strong>इसका मतलब:</strong> System में उससे ज़्यादा माल भेजा गया जितना था — data entry गलत है या माल गायब है। Risk: <strong>${wrapAmt(riskVal,false,true)}</strong>\n\n<strong>अभी करें:</strong>\n• आज warehouse जाएं, physical count करें\n• Data entry staff से गलत entries check करवाएं\n• Duplicate entries ढूंढें और सुधारें`,act:'Warehouse Audit शुरू करें'});
+  if(deadItems.length>5)cards.push({ico:'⚫',c:'var(--a5)',t:'Dead Stock से पैसा निकालें',body:`<strong>${deadItems.length} items</strong> में <strong>${wrapAmt(deadVal,false,true)}</strong> का माल बिल्कुल नहीं बिका — न कोई inflow, न outflow।\n\n<strong>क्यों बुरा है:</strong> Warehouse space, insurance cost, और पैसा block।\n\n<strong>क्या करें:</strong>\n• Discount sale / clearance offer करें\n• Supplier को return करें (अगर possible हो)\n• दूसरी branch में transfer करें\n• Scrap करें अगर कोई use नहीं`,act:'Dead Stock Sale Plan बनाएं'});
+  if(fastItems.length>0)cards.push({ico:'⚡',c:'var(--a)',t:'Fast Movers का Stock बढ़ाएं!',body:`<strong>${fastItems.length} items</strong> बहुत तेज़ बिकते हैं।\n\n<strong>Top Fast Movers:</strong> ${fastItems.slice(0,4).map(r=>r.item).join(', ')}\n\n<strong>क्यों ज़रूरी है:</strong> ये खत्म हो गए तो customer दूसरी जगह जाएंगे — sale loss!\n\n<strong>क्या करें:</strong>\n• इन items का minimum reorder level तय करें\n• जैसे ही stock minimum पर पहुँचे — तुरंत order करें\n• Supplier से lead time confirm करें`,act:'Reorder Policy बनाएं'});
+  if(idleHV.length>0)cards.push({ico:'💎',c:'var(--a4)',t:`₹1 करोड़+ का माल बेचें — अभी!`,body:`<strong>${idleHV.length}+ items</strong> में <strong>${wrapAmt(idleHV.reduce((a,r)=>a+r.cl_amt,0),false,true)}</strong> पड़ा है।\n\n<strong>Top Items:</strong> ${idleHV.slice(0,3).map(r=>r.item+' ('+fmtINR(r.cl_amt,true)+')').join(', ')}\n\n<strong>क्या करें:</strong>\n• Sales team को इन items की list दें\n• Special bundle offers बनाएं\n• Regular customers को personally call करें\n• B2B channels explore करें`,act:'Sales Push Campaign'});
+  if(slowItems.length>0)cards.push({ico:'◔',c:'var(--warn)',t:`${slowItems.length} Slow Items को Activate करें`,body:`<strong>${slowItems.length} items</strong> में माल आया पर एक unit भी नहीं गया।\n\n<strong>क्या करें:</strong>\n• Check करें — इनकी demand है बाज़ार में?\n• अगर हाँ: Marketing/pricing fix करें\n• अगर नहीं: Return policy check करें\n• Slow items की pricing review करें`,act:'Slow Items Review करें'});
+  if(dispRate<50)cards.push({ico:'📦',c:'var(--a3)',t:'Dispatch Rate बहुत कम है!',body:`Overall Dispatch Rate सिर्फ <strong>${dispRate.toFixed(0)}%</strong> है।\n\n<strong>मतलब:</strong> जितना माल आया उसमें से आधे से कम भेजा गया — warehouse भरा है!\n\n<strong>क्या करें:</strong>\n• Sales strategy को aggressive बनाएं\n• Pricing review करें — too high तो नहीं?\n• Slow moving items पर offer दें\n• Monthly inventory turnover target तय करें`,act:'Sales Strategy बनाएं'});
+
+  document.getElementById('decCards').innerHTML=cards.map(d=>`<div class="dc" style="border-left-color:${d.c}">
+    <div class="dch"><div class="dcicon">${d.ico}</div><div class="dctitle" style="color:${d.c}">${d.t}</div></div>
+    <div class="dcbody">${d.body.replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>')}</div>
+    <span class="dcact" style="background:${d.c}18;border:1px solid ${d.c}44;color:${d.c}">→ ${d.act}</span>
+  </div>`).join('');
+
+  const actions=[];
+  if(negItems.length>0)actions.push({p:'🔴 आज करें',t:`${negItems.length} Negative items की physical count`,d:`${wrapAmt(riskVal,false,true)} risk`});
+  if(deadItems.length>0)actions.push({p:'🟡 इस हफ्ते',t:`${deadItems.length} Dead stock items को review करें`,d:`${wrapAmt(deadVal,false,true)} locked`});
+  if(fastItems.length>0)actions.push({p:'🟢 Plan करें',t:'Fast movers का reorder point तय करें',d:`${fastItems.length} items`});
+  if(idleHV.length>0)actions.push({p:'🟡 इस हफ्ते',t:'High value idle items की sales push करें',d:fmtINR(idleHV.reduce((a,r)=>a+r.cl_amt,0),true)});
+  if(slowItems.length>0)actions.push({p:'🟡 इस महीने',t:'Slow items की demand check करें',d:`${slowItems.length} items`});
+  actions.push({p:'🔵 Regular',t:'Monthly stock audit schedule बनाएं',d:'Best practice'});
+  actions.push({p:'🔵 Regular',t:'ABC analysis से order decisions करें',d:'Efficient ordering'});
+  actions.push({p:'🔵 Regular',t:'Supplier से fast movers पर priority deal करें',d:'Supply chain'});
+
+  document.getElementById('actionList').innerHTML=actions.map((a,i)=>`<div class="srow" style="padding:13px 0">
+    <div style="display:flex;align-items:flex-start;gap:13px;flex:1">
+      <span style="font-family:var(--mono);font-size:10px;flex-shrink:0;padding-top:2px;white-space:nowrap">${a.p}</span>
+      <div style="flex:1">
+        <div style="font-family:var(--hi);font-size:13px;color:var(--t)">${i+1}. ${a.t}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:3px">${a.d}</div>
+      </div>
+    </div>
+  </div>`).join('');
+}
+
+// ═══════════════ NAVIGATION
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  // Re-render inventory on switch
+  if(name==='inventory')renderInv();
+  if(name==='alerts')renderAlerts();
+}
+
+// ═══════════════ SMART FLOATING TOOLTIP
+(function(){
+  const box = document.getElementById('amtTooltip');
+  const exactEl = box.querySelector('.tip-exact');
+  const wordsEl = box.querySelector('.tip-words');
+  let active = null;
+
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('.amt-tip');
+    if (!el) return;
+    active = el;
+    // data-words format: "₹5,99,51,662  ·  पाँच करोड़, निन्यानवे लाख..."
+    const raw = el.getAttribute('data-words') || '';
+    const parts = raw.split('  ·  ');
+    exactEl.textContent = parts[0] || '';
+    wordsEl.textContent = parts[1] || '';
+    box.style.display = 'block';
+  });
+
+  document.addEventListener('mouseout', e => {
+    const el = e.target.closest('.amt-tip');
+    if (el) { box.style.display = 'none'; active = null; }
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!active) return;
+    const W = box.offsetWidth || 280, H = box.offsetHeight || 70;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const pad = 14;
+    let x = e.clientX - W / 2;
+    let y = e.clientY + 24;
+    if (x < pad) x = pad;
+    if (x + W > vw - pad) x = vw - W - pad;
+    if (y + H > vh - pad) y = e.clientY - H - 16;
+    box.style.left = x + 'px';
+    box.style.top  = y + 'px';
+  });
+})();
+</script>
+</body>
+</html>
